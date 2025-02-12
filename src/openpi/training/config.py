@@ -20,6 +20,7 @@ import openpi.models.tokenizer as _tokenizer
 import openpi.policies.aloha_policy as aloha_policy
 import openpi.policies.droid_policy as droid_policy
 import openpi.policies.libero_policy as libero_policy
+import openpi.policies.ur10_policy as ur10_policy
 import openpi.shared.download as _download
 import openpi.shared.normalize as _normalize
 import openpi.training.optimizer as _optimizer
@@ -406,6 +407,60 @@ _CONFIGS = [
         data=LeRobotAlohaDataConfig(
             assets=AssetsConfig(asset_id="trossen"),
             default_prompt="open the tupperware and put the food on the plate",
+        ),
+    ),
+    #
+    # UR10
+    #
+    TrainConfig(
+        name="pi0_ur10",
+        model=pi0.Pi0Config(
+            action_horizon=10,
+        ),
+        data=SimpleDataConfig(
+            # WARNING: What is base model asset id?
+            assets=AssetsConfig(asset_id="trossen"),
+            data_transforms=lambda model: _transforms.Group(
+                inputs=[ur10_policy.UR10Inputs(action_dim=model.action_dim)],
+                outputs=[ur10_policy.UR10Outputs()],
+            ),
+            base_config=DataConfig(
+                # prompt_from_task=True,
+            ),
+        ),
+    ),
+    TrainConfig(
+        name="pi0_ur10_droid",
+        model=pi0.Pi0Config(
+            action_horizon=10,
+        ),
+        data=SimpleDataConfig(
+            # WARNING: What is base model asset id?
+            assets=AssetsConfig(asset_id="droid"),
+            data_transforms=lambda model: _transforms.Group(
+                inputs=[ur10_policy.UR10Inputs(action_dim=model.action_dim)],
+                outputs=[ur10_policy.UR10Outputs()],
+            ),
+            base_config=DataConfig(
+                # prompt_from_task=True,
+            ),
+        ),
+    ),
+    TrainConfig(
+        name="pi0_ur10_libero",
+        model=pi0.Pi0Config(
+            action_horizon=10,
+        ),
+        data=SimpleDataConfig(
+            # WARNING: What is base model asset id?
+            assets=AssetsConfig(asset_id="libero"),
+            data_transforms=lambda model: _transforms.Group(
+                inputs=[ur10_policy.UR10Inputs(action_dim=model.action_dim)],
+                outputs=[ur10_policy.UR10Outputs()],
+            ),
+            base_config=DataConfig(
+                # prompt_from_task=True,
+            ),
         ),
     ),
     #

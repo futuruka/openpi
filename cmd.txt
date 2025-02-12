@@ -1,0 +1,27 @@
+# build docker
+docker build -f scripts/docker/serve_policy.Dockerfile .
+
+mkdir /home/parilo/.cache/openpi
+docker run --rm --runtime=nvidia --gpus all --network=host --name pi0 -it -v $PWD:/app -v /home/parilo/.cache/openpi:/openpi_assets --entrypoint bash parilo/pi0
+
+# in docker
+source /.venv/bin/activate
+source set_env.sh
+uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_droid --policy.dir=s3://openpi-assets/checkpoints/pi0_base
+
+# enter existing docker
+docker exec -it pi0 /bin/bash
+source /.venv/bin/activate
+python examples/simple_client/main.py --env DROID
+
+# --- policy ret (10, 8)
+# Total time taken: 0.71 s
+# Average inference time: 71.21 ms
+
+# UR10
+uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_ur10 --policy.dir=s3://openpi-assets/checkpoints/pi0_base
+uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_ur10_droid --policy.dir=s3://openpi-assets/checkpoints/pi0_droid
+
+# in ruka docker
+cd lib/openpi/packages/openpi-client/
+python -m pip install .

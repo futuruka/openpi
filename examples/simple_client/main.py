@@ -15,6 +15,7 @@ class EnvMode(enum.Enum):
     ALOHA_SIM = "aloha_sim"
     DROID = "droid"
     LIBERO = "libero"
+    UR10 = "ur10"
 
 
 @dataclasses.dataclass
@@ -32,6 +33,7 @@ def main(args: Args) -> None:
         EnvMode.ALOHA_SIM: _random_observation_aloha,
         EnvMode.DROID: _random_observation_droid,
         EnvMode.LIBERO: _random_observation_libero,
+        EnvMode.UR10: _random_observation_ur10,
     }[args.env]
 
     policy = _websocket_client_policy.WebsocketClientPolicy(
@@ -41,11 +43,14 @@ def main(args: Args) -> None:
     logging.info(f"Server metadata: {policy.get_server_metadata()}")
 
     # Send 1 observation to make sure the model is loaded.
+    # print(obs_fn())
     policy.infer(obs_fn())
 
     start = time.time()
     for _ in range(args.num_steps):
-        policy.infer(obs_fn())
+        ret = policy.infer(obs_fn())
+        actions = ret["actions"]
+        print(f'--- policy ret {actions.shape}\n{actions[:2]}')
     end = time.time()
 
     print(f"Total time taken: {end - start:.2f} s")
@@ -81,6 +86,16 @@ def _random_observation_libero() -> dict:
         "observation/image": np.random.randint(256, size=(224, 224, 3), dtype=np.uint8),
         "observation/wrist_image": np.random.randint(256, size=(224, 224, 3), dtype=np.uint8),
         "prompt": "do something",
+    }
+
+
+def _random_observation_ur10() -> dict:
+    return {
+        # "observation/exterior_image_1_left": np.random.randint(256, size=(224, 224, 3), dtype=np.uint8),
+        "observation/wrist_image": np.random.randint(256, size=(224, 224, 3), dtype=np.uint8),
+        "observation/joint_position": np.random.rand(7),
+        "observation/gripper_position": np.random.rand(1),
+        "prompt": "pick an item",
     }
 
 
