@@ -25,3 +25,10 @@ uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_ur10_droid 
 # in ruka docker
 cd lib/openpi/packages/openpi-client/
 python -m pip install .
+
+# build fine tune docker
+#docker build -f scripts/docker/serve_policy.Dockerfile .
+#apt install hdf5-tools
+apt install ffmpeg libsm6 libxext6  -y
+uv run scripts/compute_norm_stats.py --config-name pi0_ur10_finetune
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_ur10_finetune --exp-name=ur10_ft --overwrite

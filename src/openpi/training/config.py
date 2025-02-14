@@ -159,6 +159,8 @@ class DataConfigFactory(abc.ABC):
         )
 
     def _load_norm_stats(self, assets_dir: epath.Path, asset_id: str | None) -> dict[str, _transforms.NormStats] | None:
+        if asset_id == "/app/data/dataset/":
+            asset_id = "ur10"
         if asset_id is None:
             return None
         try:
@@ -281,6 +283,64 @@ class LeRobotLiberoDataConfig(DataConfigFactory):
             inputs=[_transforms.DeltaActions(delta_action_mask)],
             outputs=[_transforms.AbsoluteActions(delta_action_mask)],
         )
+
+        # Model transforms include things like tokenizing the prompt and action targets
+        model_transforms = ModelTransformFactory()(model_config)
+
+        return dataclasses.replace(
+            self.create_base_config(assets_dirs),
+            repack_transforms=repack_transform,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+        )
+
+
+@dataclasses.dataclass(frozen=True)
+class UR10DataConfig(DataConfigFactory):
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        # # Example Usage
+        # directory = "/app/data/dataset/"
+        # field_list = [
+        #     "episode/observations/CompressedRGB__rgb",
+        #     "episode/observations/array__joint_angles",
+        #     "episode/observations/array__gripper"
+        # ]
+
+        # dataset = HDF5UR10Dataset(
+        #     files=find_h5py_files(directory),
+        #     field_list=field_list
+        # )
+
+        # Make inputs look like they come from the Libero environment
+        repack_transform = _transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                    {
+                        "wrist_image": "episode/observations/CompressedRGB__rgb",
+                        "joint_angles": "episode/observations/array__joint_angles",
+                        "gripper_pos": "episode/observations/array__gripper",
+                        # "observation/wrist_image": "wrist_image",
+                        # "observation/state": "state",
+                        # "actions": "actions",
+                        "prompt": "prompt",
+                    }
+                )
+            ]
+        )
+
+        # Prepare data for policy training
+        # Convert images to uint8 numpy arrays, add masks
+        data_transforms = _transforms.Group(
+            inputs=[ur10_policy.UR10Inputs(action_dim=model_config.action_dim, model_type=model_config.model_type)],
+            outputs=[ur10_policy.UR10Outputs()],
+        )
+        # Use delta actions (not for gripper)
+        # delta_action_mask = _transforms.make_bool_mask(6, -1)
+        # data_transforms = data_transforms.push(
+        #     inputs=[_transforms.DeltaActions(delta_action_mask)],
+        #     outputs=[_transforms.AbsoluteActions(delta_action_mask)],
+        # )
 
         # Model transforms include things like tokenizing the prompt and action targets
         model_transforms = ModelTransformFactory()(model_config)
@@ -462,6 +522,22 @@ _CONFIGS = [
                 # prompt_from_task=True,
             ),
         ),
+    ),
+    TrainConfig(
+        name="pi0_ur10_finetune",
+        model=pi0.Pi0Config(action_horizon=10),
+        data=UR10DataConfig(
+            repo_id="ur10",
+            assets=AssetsConfig(
+                asset_id="/app/data/dataset/",
+            ),
+            base_config=DataConfig(
+                local_files_only=False,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        num_train_steps=30_000,
     ),
     #
     # Inference DROID configs.

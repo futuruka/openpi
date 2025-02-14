@@ -25,7 +25,7 @@ def create_dataset(config: _config.TrainConfig) -> tuple[_config.DataConfig, _da
     if data_config.repo_id is None:
         raise ValueError("Data config must have a repo_id")
     dataset = _data_loader.create_dataset(data_config, config.model)
-    dataset = _data_loader.TransformedDataset(
+    dataset = _data_loader.create_transformed_dataset(
         dataset,
         [
             *data_config.repack_transforms.inputs,
@@ -41,7 +41,11 @@ def main(config_name: str, max_frames: int | None = None):
     config = _config.get_config(config_name)
     data_config, dataset = create_dataset(config)
 
-    num_frames = len(dataset)
+    try:
+        num_frames = len(dataset)
+    except TypeError as ex:
+        print(f'Finding length of dataset failed ({ex}), using 1000 frames')
+        num_frames = 1000
     shuffle = False
 
     if max_frames is not None and max_frames < num_frames:
@@ -51,7 +55,7 @@ def main(config_name: str, max_frames: int | None = None):
     data_loader = _data_loader.TorchDataLoader(
         dataset,
         local_batch_size=1,
-        num_workers=8,
+        num_workers=1,
         shuffle=shuffle,
         num_batches=num_frames,
     )

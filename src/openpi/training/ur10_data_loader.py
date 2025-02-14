@@ -86,6 +86,7 @@ class HDF5UR10Dataset(torch.utils.data.IterableDataset):
                 else:
                     results[dataset_name] = "Dataset not found"
 
+        results["prompt"] = "pick any object in a bin"
         return results
 
     def __iter__(self) -> Iterator[Dict[str, NDArray]]:
@@ -114,35 +115,3 @@ class HDF5UR10Dataset(torch.utils.data.IterableDataset):
                 num_transitions = f[self.field_list[0]].shape[0]
                 index = random.randint(0, num_transitions - 1)  # Randomly select an index
                 yield self._read_transition(file, index)
-
-
-def main():
-
-    # Example Usage
-    directory = "/app/data/dataset/"
-    field_list = [
-        "episode/observations/CompressedRGB__rgb",
-        "episode/observations/array__joint_angles",
-        "episode/observations/array__gripper"
-    ]
-
-    dataset = HDF5UR10Dataset(
-        files=find_h5py_files(directory),
-        field_list=field_list
-    )
-
-    # Example of how you might use DataLoader to load data in parallel
-    from torch.utils.data import DataLoader
-
-    dataloader = DataLoader(dataset, batch_size=4, num_workers=2)
-
-    for ind, transition in enumerate(dataloader):
-        for name, value in transition.items():
-            print(f"{ind} {name}: {value.shape}")
-
-        if ind == 5:
-            break
-
-
-if __name__ == "__main__":
-    main()

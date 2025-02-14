@@ -2,12 +2,13 @@ from collections.abc import Iterator, Sequence
 import multiprocessing
 import os
 import typing
-from typing import Protocol, SupportsIndex, TypeVar
+from typing import Protocol, SupportsIndex, TypeVar, Union
 
 import jax
 import jax.numpy as jnp
 import lerobot.common.datasets.lerobot_dataset as lerobot_dataset
 import numpy as np
+from openpi.training.ur10_data_loader import HDF5UR10Dataset, find_h5py_files
 import torch
 
 import openpi.models.model as _model
@@ -25,6 +26,13 @@ class Dataset(Protocol[T_co]):
 
     def __len__(self) -> int:
         raise NotImplementedError("Subclasses of Dataset should implement __len__.")
+
+
+class IterableDataset(Protocol[T_co]):
+    """Interface for a dataset with random access."""
+
+    def __iter__(self) -> Iterator[T_co]:
+        raise NotImplementedError("Subclasses of Dataset should implement __iter__.")
 
 
 class DataLoader(Protocol[T_co]):
@@ -48,6 +56,36 @@ class TransformedDataset(Dataset[T_co]):
 
     def __len__(self) -> int:
         return len(self._dataset)
+
+
+class IterableTransformedDataset(IterableDataset[T_co]):
+    def __init__(self, dataset: Dataset, transforms: Sequence[_transforms.DataTransformFn]):
+        self._dataset = dataset
+        self._transform = _transforms.compose(transforms)
+
+    def __iter__(self) -> Iterator[T_co]:
+        for item in iter(self._dataset):
+            yield self._transform(item)
+
+
+def create_transformed_dataset(
+        dataset: Dataset[T_co],
+        transforms: Sequence[_transforms.DataTransformFn]
+    ) -> Union[TransformedDataset[T_co] | IterableTransformedDataset[T_co]]:
+    if isinstance(dataset, (
+        torch.utils.data.IterableDataset,
+        IterableDataset,
+        IterableTransformedDataset,
+    )):
+        return IterableTransformedDataset(
+            dataset=dataset,
+            transforms=transforms,
+        )
+    else:
+        return TransformedDataset(
+            dataset=dataset,
+            transforms=transforms,
+        )
 
 
 class FakeDataset(Dataset):
@@ -88,6 +126,19 @@ def create_dataset(data_config: _config.DataConfig, model_config: _model.BaseMod
         raise ValueError("Repo ID is not set. Cannot create dataset.")
     if repo_id == "fake":
         return FakeDataset(model_config, num_samples=1024)
+    if repo_id == "ur10":
+
+        field_list = [
+            "episode/observations/CompressedRGB__rgb",
+            "episode/observations/array__joint_angles",
+            "episode/observations/array__gripper"
+        ]
+
+        return HDF5UR10Dataset(
+            files=find_h5py_files(data_config.asset_id),
+            field_list=field_list,
+        )
+
 
     dataset_meta = lerobot_dataset.LeRobotDatasetMetadata(repo_id, local_files_only=data_config.local_files_only)
     dataset = lerobot_dataset.LeRobotDataset(
@@ -116,7 +167,7 @@ def transform_dataset(dataset: Dataset, data_config: _config.DataConfig, *, skip
             )
         norm_stats = data_config.norm_stats
 
-    return TransformedDataset(
+    return create_transformed_dataset(
         dataset,
         [
             *data_config.repack_transforms.inputs,
@@ -180,6 +231,16 @@ def create_data_loader(
     return DataLoaderImpl(data_config, data_loader)
 
 
+class IterableDatasetTorchWrapper(torch.utils.data.IterableDataset):
+
+    def __init__(self, dataset):
+        self._dataset = dataset
+
+    def __iter__(self):
+        for item in iter(self._dataset):
+            yield item
+
+
 class TorchDataLoader:
     def __init__(
         self,
@@ -210,8 +271,11 @@ class TorchDataLoader:
         if jax.process_count() > 1:
             raise NotImplementedError("Data loading with multiple processes is not supported.")
 
-        if len(dataset) < local_batch_size:
-            raise ValueError(f"Local batch size ({local_batch_size}) is larger than the dataset size ({len(dataset)}).")
+        try:
+            if len(dataset) < local_batch_size:
+                raise ValueError(f"Local batch size ({local_batch_size}) is larger than the dataset size ({len(dataset)}).")
+        except TypeError as ex:
+            print(f'len(dataset) < local_batch_size failed ({ex}), skipping')
 
         if sharding is None:
             # Use data parallel sharding by default.
@@ -229,10 +293,14 @@ class TorchDataLoader:
 
         generator = torch.Generator()
         generator.manual_seed(seed)
+
+        print(f'--- asdasd {typing.cast(torch.utils.data.IterableDataset, dataset)}')
+
         self._data_loader = torch.utils.data.DataLoader(
-            typing.cast(torch.utils.data.Dataset, dataset),
+            # typing.cast(torch.utils.data.IterableDataset, dataset),
+            IterableDatasetTorchWrapper(dataset),
+            # shuffle=shuffle,
             batch_size=local_batch_size,
-            shuffle=shuffle,
             num_workers=num_workers,
             multiprocessing_context=mp_context,
             persistent_workers=num_workers > 0,
@@ -255,6 +323,7 @@ class TorchDataLoader:
                     return
                 try:
                     batch = next(data_iter)
+                    print(f'--- batch {type(batch)}')
                 except StopIteration:
                     break  # We've exhausted the dataset. Create a new iterator and start over.
                 num_items += 1
