@@ -1,0 +1,38 @@
+import h5py
+
+# # Open the HDF5 file in read mode
+# with h5py.File(file_path, "r") as f:
+#     def print_structure(name, obj):
+#         if isinstance(obj, h5py.Dataset):
+#             print(f"{name} : Dataset | shape={obj.shape}, dtype={obj.dtype}")
+#         elif isinstance(obj, h5py.Group):
+#             print(f"{name} : Group")
+
+#     f.visititems(print_structure)  # Recursively prints datasets and groups
+
+# episode : Group
+# episode/actions : Group
+# episode/actions/array__move|rotvec : Dataset | shape=(82, 3), dtype=float64
+# episode/actions/array__move|xyz : Dataset | shape=(82, 3), dtype=float64
+# episode/actions/array__pose : Dataset | shape=(82, 4, 4), dtype=float64
+# episode/actions/scalar__episode_end : Dataset | shape=(82,), dtype=bool
+# episode/actions/scalar__gripper|force : Dataset | shape=(82,), dtype=float64
+# episode/actions/scalar__gripper|pos : Dataset | shape=(82,), dtype=float64
+# episode/actions/scalar__gripper|speed : Dataset | shape=(82,), dtype=float64
+# episode/actions/scalar__robot : Dataset | shape=(82,), dtype=int64
+# episode/dones : Dataset | shape=(82,), dtype=bool
+# episode/infos : Group
+# episode/observations : Group
+# episode/observations/CompressedDepth__depth : Dataset | shape=(83, 58706), dtype=uint8
+# episode/observations/CompressedDepth__depth_head : Dataset | shape=(83, 53306), dtype=uint8
+# episode/observations/CompressedDepth__depth_side : Dataset | shape=(83, 59538), dtype=uint8
+# episode/observations/CompressedRGB__rgb : Dataset | shape=(83, 25998), dtype=uint8
+# episode/observations/CompressedRGB__rgb_head : Dataset | shape=(83, 24871), dtype=uint8
+# episode/observations/CompressedRGB__rgb_side : Dataset | shape=(83, 32881), dtype=uint8
+# episode/observations/array__external_force : Dataset | shape=(83, 3), dtype=float32
+# episode/observations/array__external_torque : Dataset | shape=(83, 3), dtype=float32
+# episode/observations/array__gripper : Dataset | shape=(83, 1), dtype=float32
+# episode/observations/array__gripper_open : Dataset | shape=(83, 1), dtype=uint8
+# episode/observations/array__joint_angles : Dataset | shape=(83, 6), dtype=float64
+# episode/observations/array__robot_pos_rotvec : Dataset | shape=(83, 6), dtype=float32
+# episode/rewards : Dataset | shape=(82,), dtype=float64
