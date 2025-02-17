@@ -13,12 +13,12 @@ def main():
 
     dataset = HDF5UR10Dataset(
         files=find_h5py_files(directory),
-        field_list=field_list
+        field_list=field_list,
+        num_forward_records=[1, 50, 50],
     )
 
     # Example of how you might use DataLoader to load data in parallel
     from torch.utils.data import DataLoader
-    import torch
 
     dataloader = DataLoader(
         dataset,

@@ -49,9 +49,15 @@ def scan_files(files: List[str], field_name: str) -> Tuple[int, float]:
 
 
 class HDF5UR10Dataset(torch.utils.data.IterableDataset):
-    def __init__(self, files: List[str], field_list: List[str]):
+    def __init__(
+            self,
+            files: List[str],
+            field_list: List[str],
+            num_forward_records: List[int],
+            ):
         self.field_list = field_list
         self.files = files
+        self.num_forward_records = num_forward_records
 
         # This will be set per worker by get_worker_info()
         self.rank = None
@@ -73,14 +79,17 @@ class HDF5UR10Dataset(torch.utils.data.IterableDataset):
         results = {}
 
         with h5py.File(file_path, "r") as f:
-            for dataset_name in self.field_list:
+            for dataset_name, num_fwd_rec in zip(self.field_list, self.num_forward_records):
                 if dataset_name in f:
                     dataset = f[dataset_name]
                     if index < dataset.shape[0]:
                         data = dataset[index]
+                        num_records = dataset.shape[0]
+                        indices = [min(index + i, num_records - 1) for i in range(num_fwd_rec)]
+                        data_list = [dataset[idx] for idx in indices]
                         if "CompressedRGB" in dataset_name:
-                            data = jpg2img(data)  # Decode image if necessary
-                        results[dataset_name] = data
+                            data_list = [jpg2img(data) for data in data_list]
+                        results[dataset_name] = np.stack(data_list)
                     else:
                         results[dataset_name] = f"Index {index} out of bounds (shape={dataset.shape})"
                 else:
@@ -115,8 +124,3 @@ class HDF5UR10Dataset(torch.utils.data.IterableDataset):
                 num_transitions = f[self.field_list[0]].shape[0]
                 index = random.randint(0, num_transitions - 1)  # Randomly select an index
                 yield self._read_transition(file, index)
-
-
-# repeat last actions, give 50 actions
-# --- image torch.Size([3, 256, 256])
-# --- wrist_image torch.Size([3, 256, 256])
