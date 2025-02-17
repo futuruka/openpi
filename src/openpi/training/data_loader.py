@@ -72,11 +72,18 @@ def create_transformed_dataset(
         dataset: Dataset[T_co],
         transforms: Sequence[_transforms.DataTransformFn]
     ) -> Union[TransformedDataset[T_co] | IterableTransformedDataset[T_co]]:
-    if isinstance(dataset, (
-        torch.utils.data.IterableDataset,
-        IterableDataset,
-        IterableTransformedDataset,
-    )):
+
+    try:
+        is_iterable = isinstance(dataset, (
+            torch.utils.data.IterableDataset,
+            IterableDataset,
+            IterableTransformedDataset,
+        ))
+    except TypeError as ex:
+        print(f'isinstance exception: ({ex}), using as non-iterable')
+        is_iterable = False
+
+    if is_iterable:
         return IterableTransformedDataset(
             dataset=dataset,
             transforms=transforms,
@@ -139,10 +146,10 @@ def create_dataset(data_config: _config.DataConfig, model_config: _model.BaseMod
             field_list=field_list,
         )
 
-
     dataset_meta = lerobot_dataset.LeRobotDatasetMetadata(repo_id, local_files_only=data_config.local_files_only)
     dataset = lerobot_dataset.LeRobotDataset(
         data_config.repo_id,
+        # episodes=list(range(10)),  # for test purposes
         delta_timestamps={
             key: [t / dataset_meta.fps for t in range(model_config.action_horizon)]
             for key in data_config.action_sequence_keys
@@ -294,8 +301,6 @@ class TorchDataLoader:
         generator = torch.Generator()
         generator.manual_seed(seed)
 
-        print(f'--- asdasd {typing.cast(torch.utils.data.IterableDataset, dataset)}')
-
         self._data_loader = torch.utils.data.DataLoader(
             # typing.cast(torch.utils.data.IterableDataset, dataset),
             IterableDatasetTorchWrapper(dataset),
@@ -323,7 +328,6 @@ class TorchDataLoader:
                     return
                 try:
                     batch = next(data_iter)
-                    print(f'--- batch {type(batch)}')
                 except StopIteration:
                     break  # We've exhausted the dataset. Create a new iterator and start over.
                 num_items += 1

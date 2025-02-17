@@ -115,3 +115,8 @@ class HDF5UR10Dataset(torch.utils.data.IterableDataset):
                 num_transitions = f[self.field_list[0]].shape[0]
                 index = random.randint(0, num_transitions - 1)  # Randomly select an index
                 yield self._read_transition(file, index)
+
+
+# repeat last actions, give 50 actions
+# --- image torch.Size([3, 256, 256])
+# --- wrist_image torch.Size([3, 256, 256])

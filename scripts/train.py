@@ -202,7 +202,9 @@ def main(config: _config.TrainConfig):
     jax.config.update("jax_compilation_cache_dir", str(epath.Path("~/.cache/jax").expanduser()))
 
     rng = jax.random.key(config.seed)
+    print(f'--- rng {rng}', flush=True)
     train_rng, init_rng = jax.random.split(rng)
+    print(f'--- train_rng {train_rng} init_rng {init_rng}', flush=True)
 
     mesh = sharding.make_mesh(config.fsdp_devices)
     data_sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec(sharding.DATA_AXIS))
@@ -251,7 +253,17 @@ def main(config: _config.TrainConfig):
     infos = []
     for step in pbar:
         with sharding.set_mesh(mesh):
-            train_state, info = ptrain_step(train_rng, train_state, batch)
+            obs, acts = batch
+            # print(acts[-1])
+            for key, im in obs.images.items():
+                print(f'--- {key} {im.shape}')
+
+            # print(f'--- train_rng {train_rng}', flush=True)
+            train_state, info = ptrain_step(
+                train_rng,
+                train_state,
+                batch,
+            )
         infos.append(info)
         if step % config.log_interval == 0:
             stacked_infos = common_utils.stack_forest(infos)

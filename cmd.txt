@@ -1,8 +1,9 @@
 # build docker
-docker build -f scripts/docker/serve_policy.Dockerfile .
+docker build -t parilo/pi0 -f scripts/docker/serve_policy.Dockerfile .
 
 mkdir /home/parilo/.cache/openpi
 docker run --rm --runtime=nvidia --gpus all --network=host --name pi0 -it -v $PWD:/app -v /home/parilo/.cache/openpi:/openpi_assets --entrypoint bash parilo/pi0
+docker run --rm --runtime=nvidia --gpus all --network=host --shm-size=1g --ulimit memlock=-1 --name pi0 -it -v $PWD:/app -v /home/parilo/.cache/openpi:/openpi_assets --entrypoint bash parilo/pi0
 
 # in docker
 source /.venv/bin/activate
@@ -32,3 +33,6 @@ python -m pip install .
 apt install ffmpeg libsm6 libxext6  -y
 uv run scripts/compute_norm_stats.py --config-name pi0_ur10_finetune
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_ur10_finetune --exp-name=ur10_ft --overwrite
+
+docker build -t parilo/pi2 -f scripts/docker/serve_policy2.Dockerfile .
+docker run --rm --runtime=nvidia --gpus all --network=host --name pi2 -it -v $PWD:/app -v /home/parilo/.cache/openpi:/openpi_assets --entrypoint bash parilo/pi2
