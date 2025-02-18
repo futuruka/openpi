@@ -320,9 +320,6 @@ class UR10DataConfig(DataConfigFactory):
                         "wrist_image": "episode/observations/CompressedRGB__rgb",
                         "joint_angles": "episode/observations/array__joint_angles",
                         "gripper_pos": "episode/observations/array__gripper",
-                        # "observation/wrist_image": "wrist_image",
-                        # "observation/state": "state",
-                        # "actions": "actions",
                         "prompt": "prompt",
                     }
                 )

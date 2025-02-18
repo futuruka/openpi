@@ -7,15 +7,15 @@ from openpi import transforms
 from openpi.models import model as _model
 
 
-def make_ur10_example() -> dict:
-    """Creates a random input example for the Droid policy."""
-    return {
-        # "observation/exterior_image_1_left": np.random.randint(256, size=(224, 224, 3), dtype=np.uint8),
-        "observation/wrist_image": np.random.randint(256, size=(224, 224, 3), dtype=np.uint8),
-        "observation/joint_position": np.random.rand(6),
-        "observation/gripper_position": np.random.rand(1),
-        "prompt": "pick an item",
-    }
+# def make_ur10_example() -> dict:
+#     """Creates a random input example for the Droid policy."""
+#     return {
+#         # "observation/exterior_image_1_left": np.random.randint(256, size=(224, 224, 3), dtype=np.uint8),
+#         "observation/wrist_image": np.random.randint(256, size=(224, 224, 3), dtype=np.uint8),
+#         "observation/joint_position": np.random.rand(6),
+#         "observation/gripper_position": np.random.rand(1),
+#         "prompt": "pick an item",
+#     }
 
 
 def _parse_image(image) -> np.ndarray:
@@ -46,7 +46,6 @@ class UR10Inputs(transforms.DataTransformFn):
             state = np.concatenate([data["joint_angles"], data["gripper_pos"] / 100])
 
         state = transforms.pad_to_dim(state, self.action_dim)
-        # print(f'--- state {state}')
 
         # Possibly need to parse images to uint8 (H,W,C) since LeRobot automatically
         # stores as float32 (C,H,W), gets skipped for policy inference
@@ -55,7 +54,8 @@ class UR10Inputs(transforms.DataTransformFn):
             wrist_image = _parse_image(np.squeeze(data["wrist_image"], axis=0))
         else:
             wrist_image = _parse_image(data["wrist_image"])
-        # print(f'--- img {wrist_image.shape} {wrist_image.dtype} min {wrist_image.min()} mean {wrist_image.mean()} max {wrist_image.max()}')
+        print(f'--- img {wrist_image.shape} {wrist_image.dtype} min {wrist_image.min()} mean {wrist_image.mean()} max {wrist_image.max()}')
+        print(f'--- state {state[:7]}')
 
         match self.model_type:
             case _model.ModelType.PI0:
