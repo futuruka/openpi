@@ -135,15 +135,14 @@ def create_dataset(data_config: _config.DataConfig, model_config: _model.BaseMod
         return FakeDataset(model_config, num_samples=1024)
     if repo_id == "ur10":
 
-        field_list = [
-            "episode/observations/CompressedRGB__rgb",
-            "episode/observations/array__joint_angles",
-            "episode/observations/array__gripper"
-        ]
-
         return HDF5UR10Dataset(
             files=find_h5py_files(data_config.asset_id),
-            field_list=field_list,
+            field_list=[
+                "episode/observations/CompressedRGB__rgb",
+                "episode/observations/array__joint_angles",
+                "episode/observations/array__gripper"
+            ],
+            num_forward_records=[1, 51, 51],
         )
 
     dataset_meta = lerobot_dataset.LeRobotDatasetMetadata(repo_id, local_files_only=data_config.local_files_only)

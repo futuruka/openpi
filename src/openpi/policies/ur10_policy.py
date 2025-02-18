@@ -37,14 +37,24 @@ class UR10Inputs(transforms.DataTransformFn):
     model_type: _model.ModelType = _model.ModelType.PI0
 
     def __call__(self, data: dict) -> dict:
-        state = np.concatenate([data["joint_angles"], data["gripper_pos"] / 100])
+        # print(f'--- joint_angles {data["joint_angles"].shape} wrist_image {data["wrist_image"].shape}')
+        is_batch = len(data["joint_angles"].shape) == 2
+
+        if is_batch:
+            state = np.concatenate([data["joint_angles"][0], data["gripper_pos"][0] / 100])
+        else:
+            state = np.concatenate([data["joint_angles"], data["gripper_pos"] / 100])
+
         state = transforms.pad_to_dim(state, self.action_dim)
         # print(f'--- state {state}')
 
         # Possibly need to parse images to uint8 (H,W,C) since LeRobot automatically
         # stores as float32 (C,H,W), gets skipped for policy inference
         # base_image = _parse_image(data["observation/exterior_image_1_left"])
-        wrist_image = _parse_image(data["wrist_image"])
+        if is_batch:
+            wrist_image = _parse_image(np.squeeze(data["wrist_image"], axis=0))
+        else:
+            wrist_image = _parse_image(data["wrist_image"])
         # print(f'--- img {wrist_image.shape} {wrist_image.dtype} min {wrist_image.min()} mean {wrist_image.mean()} max {wrist_image.max()}')
 
         match self.model_type:
@@ -62,7 +72,14 @@ class UR10Inputs(transforms.DataTransformFn):
         }
 
         # if "actions" in data:
-        inputs["actions"] = state
+        if is_batch:
+            actions = np.concatenate([
+                data["joint_angles"][1:],
+                data["gripper_pos"][1:] / 100
+            ], axis=-1)
+            actions = transforms.pad_to_dim(actions, self.action_dim)
+            inputs["actions"] = actions
+            # print(f'--- actions {inputs["actions"].shape}')
 
         if "prompt" in data:
             inputs["prompt"] = data["prompt"]

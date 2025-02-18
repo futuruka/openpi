@@ -45,7 +45,7 @@ def main(config_name: str, max_frames: int | None = None):
         num_frames = len(dataset)
     except TypeError as ex:
         print(f'Finding length of dataset failed ({ex}), using 1000 frames')
-        num_frames = 1000
+        num_frames = 10000
     shuffle = False
 
     if max_frames is not None and max_frames < num_frames:

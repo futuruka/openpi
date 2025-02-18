@@ -159,7 +159,7 @@ class DataConfigFactory(abc.ABC):
         )
 
     def _load_norm_stats(self, assets_dir: epath.Path, asset_id: str | None) -> dict[str, _transforms.NormStats] | None:
-        if asset_id == "/app/data/dataset/":
+        if asset_id.startswith("/app/data/dataset"):
             asset_id = "ur10"
         if asset_id is None:
             return None
@@ -525,7 +525,7 @@ _CONFIGS = [
     ),
     TrainConfig(
         name="pi0_ur10_finetune",
-        model=pi0.Pi0Config(action_horizon=10),
+        model=pi0.Pi0Config(),
         data=UR10DataConfig(
             repo_id="ur10",
             assets=AssetsConfig(
@@ -538,8 +538,33 @@ _CONFIGS = [
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         fsdp_devices=2,
-        batch_size=2,
+        batch_size=6,
         num_train_steps=30_000,
+    ),
+    TrainConfig(
+        name="pi0_ur10_low_mem_finetune",
+        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
+        data=UR10DataConfig(
+            repo_id="ur10",
+            assets=AssetsConfig(
+                asset_id="/app/data/dataset_sft_iter_1_1688/",
+            ),
+            base_config=DataConfig(
+                local_files_only=False,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        fsdp_devices=2,
+        batch_size=32,
+        num_train_steps=10_000,
+        log_interval=20,
+        save_interval=500,
+        keep_period=500,
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        ema_decay=None,
     ),
     #
     # Inference DROID configs.
