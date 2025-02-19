@@ -56,7 +56,7 @@ class UR10Inputs(transforms.DataTransformFn):
         else:
             wrist_image = _parse_image(data["wrist_image"])
         # print(f'--- img {wrist_image.shape} {wrist_image.dtype} min {wrist_image.min()} mean {wrist_image.mean()} max {wrist_image.max()}')
-        # print(f'--- state {state[:7]}')
+        print(f'--- state {state[:7]}')
 
         match self.model_type:
             case _model.ModelType.PI0:
@@ -78,7 +78,7 @@ class UR10Inputs(transforms.DataTransformFn):
                 data["joint_angles"][1:],
                 data["gripper_pos"][1:] / 100
             ], axis=-1)
-            # print(f'--- actions {actions.shape}\n{actions[:2]}')
+            print(f'--- actions {actions.shape}\n{actions[:2]}')
             actions = transforms.pad_to_dim(actions, self.action_dim)
             inputs["actions"] = actions
 

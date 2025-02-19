@@ -544,6 +544,7 @@ _CONFIGS = [
         data=UR10DataConfig(
             repo_id="ur10",
             assets=AssetsConfig(
+                # asset_id="/app/data/dataset_sft_iter_1_1688/",
                 asset_id="/app/data/dataset/",
             ),
             base_config=DataConfig(

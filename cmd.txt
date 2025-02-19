@@ -38,3 +38,7 @@ uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_ur10_low_me
 # build docker in cobots VM
 docker build -t parilo/pi2 -f scripts/docker/serve_policy2.Dockerfile .
 docker run --rm --runtime=nvidia --gpus all --network=host --name pi2 -it -v $PWD:/app -v /home/parilo/.cache/openpi:/openpi_assets --entrypoint bash parilo/pi2
+
+# in ruka docker
+cd lib/openpi/packages/openpi-client
+python -m pip install .
