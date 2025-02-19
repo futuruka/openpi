@@ -48,6 +48,24 @@ def scan_files(files: List[str], field_name: str) -> Tuple[int, float]:
     )
 
 
+def read_episode_data(file_path: str, field_list: List[str]) -> Dict[str, NDArray]:
+    results = {}
+
+    with h5py.File(file_path, "r") as f:
+        for dataset_name in field_list:
+            if dataset_name in f:
+                dataset = f[dataset_name]
+                if "CompressedRGB" in dataset_name:
+                    data_list = [jpg2img(dataset[ind]) for ind in range(len(dataset))]
+                    results[dataset_name] = np.stack(data_list)
+                else:
+                    results[dataset_name] = np.array(dataset)
+            else:
+                raise ValueError(f"Dataset not found ({dataset_name})")
+
+    return results
+
+
 class HDF5UR10Dataset(torch.utils.data.IterableDataset):
     def __init__(
             self,
@@ -83,7 +101,6 @@ class HDF5UR10Dataset(torch.utils.data.IterableDataset):
                 if dataset_name in f:
                     dataset = f[dataset_name]
                     if index < dataset.shape[0]:
-                        data = dataset[index]
                         num_records = dataset.shape[0]
                         indices = [min(index + i, num_records - 1) for i in range(num_fwd_rec)]
                         data_list = [dataset[idx] for idx in indices]

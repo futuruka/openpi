@@ -252,7 +252,7 @@ def main(config: _config.TrainConfig):
     for step in pbar:
         with sharding.set_mesh(mesh):
             # obs, acts = batch
-            # print(acts[-1])
+            # print(f'--- actions train\n{acts[:2, :2, :10]}')
             # for key, im in obs.images.items():
             #     print(f'--- {key} {im.shape}')
 

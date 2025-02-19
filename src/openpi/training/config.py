@@ -544,7 +544,7 @@ _CONFIGS = [
         data=UR10DataConfig(
             repo_id="ur10",
             assets=AssetsConfig(
-                asset_id="/app/data/dataset_sft_iter_1_1688/",
+                asset_id="/app/data/dataset/",
             ),
             base_config=DataConfig(
                 local_files_only=False,  # Set to True for local-only datasets.
@@ -554,10 +554,10 @@ _CONFIGS = [
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         fsdp_devices=2,
         batch_size=32,
-        num_train_steps=10_000,
-        log_interval=20,
-        save_interval=500,
-        keep_period=500,
+        num_train_steps=100_000,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=1000,
         freeze_filter=pi0.Pi0Config(
             paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
         ).get_freeze_filter(),

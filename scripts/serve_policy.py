@@ -104,9 +104,9 @@ def main(args: Args) -> None:
     if args.record:
         policy = _policy.PolicyRecorder(policy, "policy_records")
 
-    hostname = socket.gethostname()
-    local_ip = socket.gethostbyname(hostname)
-    logging.info("Creating server (host: %s, ip: %s)", hostname, local_ip)
+    # hostname = socket.gethostname()
+    # local_ip = socket.gethostbyname(hostname)
+    # logging.info("Creating server (host: %s, ip: %s)", hostname, local_ip)
 
     server = websocket_policy_server.WebsocketPolicyServer(
         policy=policy,
