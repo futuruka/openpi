@@ -718,7 +718,7 @@ _CONFIGS = [
         save_interval=100,
         overwrite=True,
         exp_name="debug",
-        num_train_steps=10,
+        num_train_steps=10_000,
         wandb_enabled=False,
     ),
     TrainConfig(
