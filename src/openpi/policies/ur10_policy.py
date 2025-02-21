@@ -56,13 +56,18 @@ class UR10Inputs(transforms.DataTransformFn):
         else:
             wrist_image = _parse_image(data["wrist_image"])
         # print(f'--- img {wrist_image.shape} {wrist_image.dtype} min {wrist_image.min()} mean {wrist_image.mean()} max {wrist_image.max()}')
-        print(f'--- state {state[:7]}')
+        # print(f'--- state {state[:7]}')
 
         match self.model_type:
             case _model.ModelType.PI0:
                 names = ("base_0_rgb", "left_wrist_0_rgb", "right_wrist_0_rgb")
                 images = (np.zeros_like(wrist_image), wrist_image, np.zeros_like(wrist_image))
                 image_masks = (np.False_, np.True_, np.False_)
+            case _model.ModelType.PI0_FAST:
+                names = ("base_0_rgb", "base_1_rgb", "wrist_0_rgb")
+                # We don't mask out padding images for FAST models.
+                images = (np.zeros_like(wrist_image), np.zeros_like(wrist_image), wrist_image)
+                image_masks = (np.False_, np.False_, np.True_)
             case _:
                 raise ValueError(f"Unsupported model type: {self.model_type}")
 
@@ -78,7 +83,7 @@ class UR10Inputs(transforms.DataTransformFn):
                 data["joint_angles"][1:],
                 data["gripper_pos"][1:] / 100
             ], axis=-1)
-            print(f'--- actions {actions.shape}\n{actions[:2]}')
+            # print(f'--- actions {actions.shape}\n{actions[:2]}')
             actions = transforms.pad_to_dim(actions, self.action_dim)
             inputs["actions"] = actions
 

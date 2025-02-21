@@ -553,14 +553,39 @@ _CONFIGS = [
             ),
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
-        fsdp_devices=2,
+        # fsdp_devices=1,
+        batch_size=32,
+        num_train_steps=100_000,
+        log_interval=50,
+        save_interval=4000,
+        keep_period=4000,
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        ema_decay=None,
+    ),
+    TrainConfig(
+        name="pi0_fast_ur10_low_mem_finetune",
+        model=pi0_fast.Pi0FASTConfig(paligemma_variant="gemma_2b_lora"),
+        data=UR10DataConfig(
+            repo_id="ur10",
+            assets=AssetsConfig(
+                # asset_id="/app/data/dataset_sft_iter_1_1688/",
+                asset_id="/app/data/dataset/",
+            ),
+            base_config=DataConfig(
+                local_files_only=False,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
         batch_size=32,
         num_train_steps=100_000,
         log_interval=50,
         save_interval=1000,
         keep_period=1000,
-        freeze_filter=pi0.Pi0Config(
-            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        freeze_filter=pi0_fast.Pi0FASTConfig(
+            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
         ).get_freeze_filter(),
         ema_decay=None,
     ),
