@@ -569,24 +569,25 @@ _CONFIGS = [
     TrainConfig(
         name="pi0_ur10_low_mem_finetune",
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
-        data=UR10DataConfig(
-            repo_id="ur10",
-            assets=AssetsConfig(
-                # asset_id="/app/data/dataset_sft_iter_1_1688/",
-                asset_id="/app/data/dataset/",
-            ),
-            base_config=DataConfig(
-                local_files_only=False,  # Set to True for local-only datasets.
-                prompt_from_task=True,
-            ),
-        ),
-        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        data=FakeDataConfig(),
+        # data=UR10DataConfig(
+        #     repo_id="ur10",
+        #     assets=AssetsConfig(
+        #         # asset_id="/app/data/dataset_sft_iter_1_1688/",
+        #         asset_id="/app/data/dataset-10k/",
+        #     ),
+        #     base_config=DataConfig(
+        #         local_files_only=False,  # Set to True for local-only datasets.
+        #         prompt_from_task=True,
+        #     ),
+        # ),
+        # weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         # fsdp_devices=1,
         batch_size=32,
         num_train_steps=100_000,
         log_interval=50,
-        save_interval=4000,
-        keep_period=4000,
+        save_interval=10_000,
+        keep_period=10_000,
         freeze_filter=pi0.Pi0Config(
             paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
         ).get_freeze_filter(),

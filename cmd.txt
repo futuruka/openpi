@@ -58,12 +58,20 @@ CUDA_VISIBLE_DEVICES=1,6 uv run scripts/compute_norm_stats.py --config-name pi0_
 CUDA_VISIBLE_DEVICES=1,6 uv run scripts/train.py pi0_fast_ur10_finetune --exp-name=pi0_fast_ur10_finetune_3 --resume
 
 # nirvana
-docker build -t parilo/pi0_nirvana:0.1 -f scripts/docker/serve_policy_n.Dockerfile .
-docker tag parilo/pi0_nirvana:0.1 registry.yandex.net/parilo/pi0_nirvana:0.1
-docker image push registry.yandex.net/parilo/pi0_nirvana:0.1
+docker build -t parilo/pi0_nirvana:0.2 -f scripts/docker/serve_policy_n2.Dockerfile .
+docker tag parilo/pi0_nirvana:0.2 registry.yandex.net/parilo/pi0_nirvana:0.2
+docker image push registry.yandex.net/parilo/pi0_nirvana:0.2
 tar -cf code_archive.tar openpi2
 # dfs v1 is yt
 ./ruka dfs upload lib/code_archive.tar exp/233_pi0/code_archive.tar
 python exp/233_pi0/run_on_nirvana.py
 # add docker imane into layers
 # https://docs.yandex-team.ru/mltools/tools/python-deep-learning/environment
+
+docker build -t parilo/pi0_n2 -f scripts/docker/serve_policy_n2.Dockerfile .
+docker run --rm --gpus all --network=host --shm-size=1g --ulimit memlock=-1 --name pi0_n2 -it -v $PWD:/app -v /home/parilo/.cache/openpi:/openpi_assets --entrypoint bash parilo/pi0_n2
+export SOURCE_CODE_PATH=/app
+export PYTHONPATH=$PYTHONPATH:$SOURCE_CODE_PATH/src
+cd $SOURCE_CODE_PATH
+source set_env.sh
+CUDA_VISIBLE_DEVICES=3 python scripts/train.py pi0_ur10_low_mem_finetune --exp-name=debug_pi0_ur10_low_mem_finetune --resume

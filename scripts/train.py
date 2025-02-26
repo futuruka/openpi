@@ -13,7 +13,7 @@ import jax.experimental
 import jax.numpy as jnp
 import optax
 import tqdm_loggable.auto as tqdm
-import wandb
+# import wandb
 
 import openpi.models.model as _model
 import openpi.shared.array_typing as at
@@ -232,7 +232,7 @@ def main(config: _config.TrainConfig):
         overwrite=config.overwrite,
         resume=config.resume,
     )
-    init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
+    # init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
     print(f'--- train 5')
 
     data_loader = _data_loader.create_data_loader(
@@ -285,7 +285,6 @@ def main(config: _config.TrainConfig):
             #     print(f'--- {key} {im.shape}')
 
             # print(f'--- train_rng {train_rng}', flush=True)
-            print(f'--- train 12')
             train_state, info = ptrain_step(
                 train_rng,
                 train_state,
@@ -297,7 +296,7 @@ def main(config: _config.TrainConfig):
             reduced_info = jax.device_get(jax.tree.map(jnp.mean, stacked_infos))
             info_str = ", ".join(f"{k}={v:.4f}" for k, v in reduced_info.items())
             pbar.write(f"Step {step}: {info_str}")
-            wandb.log(reduced_info, step=step)
+            # wandb.log(reduced_info, step=step)
             infos = []
         batch = next(data_iter)
 
