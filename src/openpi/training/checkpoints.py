@@ -45,6 +45,7 @@ def initialize_checkpoint_dir(
             keep_period=keep_period,
             create=False,
             async_options=ocp.AsyncOptions(timeout_secs=7200),
+            enable_async_checkpointing=False,
         ),
     )
 
@@ -71,15 +72,19 @@ def save_state(
         if norm_stats is not None and data_config.asset_id is not None:
             _normalize.save(directory / data_config.asset_id, norm_stats)
 
+    print(f'--- save_state 1', flush=True)
     # Split params that can be used for inference into a separate item.
     with at.disable_typechecking():
         train_state, params = _split_params(state)
+    print(f'--- save_state 2', flush=True)
     items = {
         "assets": save_assets,
         "train_state": train_state,
         "params": {"params": params},
     }
+    print(f'--- save_state 3', flush=True)
     checkpoint_manager.save(step, items)
+    print(f'--- save_state 4', flush=True)
 
 
 def restore_state(

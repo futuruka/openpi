@@ -49,9 +49,15 @@ class CheckpointWeightLoader(WeightLoader):
 
     def load(self, params: at.Params) -> at.Params:
         # We are loading np.ndarray and relying on the training code to properly convert and shard the params.
-        loaded_params = _model.restore_params(download.maybe_download(self.params_path), restore_type=np.ndarray)
+        print(f'--- load 1', flush=True)
+        path = download.maybe_download(self.params_path)
+        print(f'--- load 2', flush=True)
+        loaded_params = _model.restore_params(path, restore_type=np.ndarray)
+        print(f'--- load 3', flush=True)
         # Add all missing LoRA weights.
-        return _merge_params(loaded_params, params, missing_regex=".*lora.*")
+        res = _merge_params(loaded_params, params, missing_regex=".*lora.*")
+        print(f'--- load 4', flush=True)
+        return res
 
 
 @dataclasses.dataclass(frozen=True)
@@ -84,19 +90,35 @@ def _merge_params(loaded_params: at.Params, params: at.Params, *, missing_regex:
     Returns:
         A new dictionary with the merged parameters.
     """
+    print(f'--- _merge_params 1', flush=True)
     flat_ref = flax.traverse_util.flatten_dict(params, sep="/")
+    print(f'--- _merge_params 2', flush=True)
     flat_loaded = flax.traverse_util.flatten_dict(loaded_params, sep="/")
+    print(f'--- _merge_params 3', flush=True)
 
     # First, take all weights that are a subset of the reference weights.
+    print(f'--- _merge_params 4', flush=True)
     result = {}
     for k, v in flat_loaded.items():
+        print(f'--- _merge_params 4.1 {k}', flush=True)
         if k in flat_ref:
-            result[k] = v.astype(flat_ref[k].dtype)
+            print(f'--- _merge_params 4.2 {k} v.dtype {v.dtype} flat_ref[k].dtype {flat_ref[k].dtype}', flush=True)
+            if v.dtype != flat_ref[k].dtype:
+                result[k] = v.astype(flat_ref[k].dtype)
+            else:
+                result[k] = v
+        print(f'--- _merge_params 4.3', flush=True)
+    print(f'--- _merge_params 5', flush=True)
 
     # Then, merge any missing weights as defined by the missing regex.
+    print(f'--- _merge_params 6', flush=True)
     pattern = re.compile(missing_regex)
+    print(f'--- _merge_params 7', flush=True)
     for k in {k for k in flat_ref if pattern.fullmatch(k)}:
         if k not in result:
             result[k] = flat_ref[k]
+    print(f'--- _merge_params 8', flush=True)
 
-    return flax.traverse_util.unflatten_dict(result, sep="/")
+    res = flax.traverse_util.unflatten_dict(result, sep="/")
+    print(f'--- _merge_params 9', flush=True)
+    return res

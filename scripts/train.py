@@ -71,20 +71,27 @@ def init_wandb(config: _config.TrainConfig, *, resuming: bool, log_code: bool = 
 
 def _load_weights_and_validate(loader: _weight_loaders.WeightLoader, params_shape: at.Params) -> at.Params:
     """Loads and validates the weights. Returns a loaded subset of the weights."""
+    print(f'--- _load_weights_and_validate 1', flush=True)
     loaded_params = loader.load(params_shape)
+    print(f'--- _load_weights_and_validate 2', flush=True)
     at.check_pytree_equality(expected=params_shape, got=loaded_params, check_shapes=True, check_dtypes=True)
+    print(f'--- _load_weights_and_validate 3', flush=True)
 
     # Remove jax.ShapeDtypeStruct from the loaded params. This makes sure that only the loaded params are returned.
-    return traverse_util.unflatten_dict(
+    res = traverse_util.unflatten_dict(
         {k: v for k, v in traverse_util.flatten_dict(loaded_params).items() if not isinstance(v, jax.ShapeDtypeStruct)}
     )
+    print(f'--- _load_weights_and_validate 4', flush=True)
+    return res
 
 
 @at.typecheck
 def init_train_state(
     config: _config.TrainConfig, init_rng: at.KeyArrayLike, mesh: jax.sharding.Mesh, *, resume: bool
 ) -> tuple[training_utils.TrainState, Any]:
+    print(f'--- init_train_state 1')
     tx = _optimizer.create_optimizer(config.optimizer, config.lr_schedule, weight_decay_mask=None)
+    print(f'--- init_train_state 2')
 
     def init(rng: at.KeyArrayLike, partial_params: at.Params | None = None) -> training_utils.TrainState:
         rng, model_rng = jax.random.split(rng)
@@ -112,14 +119,20 @@ def init_train_state(
             ema_params=None if config.ema_decay is None else params,
         )
 
+    print(f'--- init_train_state 3')
     train_state_shape = jax.eval_shape(init, init_rng)
+    print(f'--- init_train_state 4')
     state_sharding = sharding.fsdp_sharding(train_state_shape, mesh, log=True)
+    print(f'--- init_train_state 5')
 
     if resume:
         return train_state_shape, state_sharding
 
+    print(f'--- init_train_state 6')
     partial_params = _load_weights_and_validate(config.weight_loader, train_state_shape.params.to_pure_dict())
+    print(f'--- init_train_state 7')
     replicated_sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec())
+    print(f'--- init_train_state 8')
 
     # Initialize the train state and mix in the partial params.
     train_state = jax.jit(
@@ -128,6 +141,7 @@ def init_train_state(
         in_shardings=replicated_sharding,
         out_shardings=state_sharding,
     )(init_rng, partial_params)
+    print(f'--- init_train_state 9')
 
     return train_state, state_sharding
 
@@ -199,15 +213,19 @@ def main(config: _config.TrainConfig):
             f"Batch size {config.batch_size} must be divisible by the number of devices {jax.device_count()}."
         )
 
+    print(f'--- train 1')
     jax.config.update("jax_compilation_cache_dir", str(epath.Path("~/.cache/jax").expanduser()))
 
+    print(f'--- train 2')
     rng = jax.random.key(config.seed)
     train_rng, init_rng = jax.random.split(rng)
 
+    print(f'--- train 3')
     mesh = sharding.make_mesh(config.fsdp_devices)
     data_sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec(sharding.DATA_AXIS))
     replicated_sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec())
 
+    print(f'--- train 4')
     checkpoint_manager, resuming = _checkpoints.initialize_checkpoint_dir(
         config.checkpoint_dir,
         keep_period=config.keep_period,
@@ -215,6 +233,7 @@ def main(config: _config.TrainConfig):
         resume=config.resume,
     )
     init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
+    print(f'--- train 5')
 
     data_loader = _data_loader.create_data_loader(
         config,
@@ -222,17 +241,24 @@ def main(config: _config.TrainConfig):
         num_workers=config.num_workers,
         shuffle=True,
     )
+    print(f'--- train 6')
     data_iter = iter(data_loader)
     batch = next(data_iter)
+    print(f'--- train 7')
     logging.info(f"Initialized data loader:\n{training_utils.array_tree_to_info(batch)}")
 
+    print(f'--- train 7.1')
     train_state, train_state_sharding = init_train_state(config, init_rng, mesh, resume=resuming)
+    print(f'--- train 7.2')
     jax.block_until_ready(train_state)
+    print(f'--- train 7.3')
     logging.info(f"Initialized train state:\n{training_utils.array_tree_to_info(train_state.params)}")
+    print(f'--- train 8')
 
     if resuming:
         train_state = _checkpoints.restore_state(checkpoint_manager, train_state, data_loader)
 
+    print(f'--- train 9')
     ptrain_step = jax.jit(
         functools.partial(train_step, config),
         in_shardings=(replicated_sharding, train_state_sharding, data_sharding),
@@ -240,6 +266,7 @@ def main(config: _config.TrainConfig):
         donate_argnums=(1,),
     )
 
+    print(f'--- train 10')
     start_step = int(train_state.step)
     pbar = tqdm.tqdm(
         range(start_step, config.num_train_steps),
@@ -247,6 +274,7 @@ def main(config: _config.TrainConfig):
         total=config.num_train_steps,
         dynamic_ncols=True,
     )
+    print(f'--- train 11')
 
     infos = []
     for step in pbar:
@@ -257,6 +285,7 @@ def main(config: _config.TrainConfig):
             #     print(f'--- {key} {im.shape}')
 
             # print(f'--- train_rng {train_rng}', flush=True)
+            print(f'--- train 12')
             train_state, info = ptrain_step(
                 train_rng,
                 train_state,

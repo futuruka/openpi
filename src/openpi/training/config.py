@@ -526,18 +526,46 @@ _CONFIGS = [
         data=UR10DataConfig(
             repo_id="ur10",
             assets=AssetsConfig(
-                asset_id="/app/data/dataset/",
+                asset_id="/app/data/dataset-10k/",
             ),
             base_config=DataConfig(
                 local_files_only=False,  # Set to True for local-only datasets.
                 prompt_from_task=True,
             ),
         ),
+        # data=FakeDataConfig(),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         fsdp_devices=2,
-        batch_size=6,
-        num_train_steps=30_000,
+        batch_size=32,
+        num_train_steps=100_000,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=1000,
     ),
+
+    TrainConfig(
+        name="pi0_fast_ur10_finetune",
+        model=pi0_fast.Pi0FASTConfig(action_dim=7, action_horizon=10),
+        data=UR10DataConfig(
+            repo_id="ur10",
+            assets=AssetsConfig(
+                asset_id="/app/data/dataset-10k/",
+            ),
+            base_config=DataConfig(
+                local_files_only=False,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+        ),
+        # data=FakeDataConfig(),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
+        fsdp_devices=2,
+        batch_size=32,
+        num_train_steps=100_000,
+        log_interval=20,
+        save_interval=10_000,
+        keep_period=10_000,
+    ),
+
     TrainConfig(
         name="pi0_ur10_low_mem_finetune",
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
@@ -740,7 +768,7 @@ _CONFIGS = [
         data=FakeDataConfig(),
         batch_size=2,
         model=pi0.Pi0Config(paligemma_variant="dummy", action_expert_variant="dummy"),
-        save_interval=100,
+        save_interval=10000,
         overwrite=True,
         exp_name="debug",
         num_train_steps=10_000,
