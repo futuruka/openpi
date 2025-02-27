@@ -69,9 +69,12 @@ python exp/233_pi0/run_on_nirvana.py
 # https://docs.yandex-team.ru/mltools/tools/python-deep-learning/environment
 
 docker build -t parilo/pi0_n2 -f scripts/docker/serve_policy_n2.Dockerfile .
-docker run --rm --gpus all --network=host --shm-size=1g --ulimit memlock=-1 --name pi0_n2 -it -v $PWD:/app -v /home/parilo/.cache/openpi:/openpi_assets --entrypoint bash parilo/pi0_n2
+docker run --rm --gpus all --network=none --shm-size=1g --ulimit memlock=-1 --name pi0_n2 -it -v $PWD:/app -v /home/parilo/.cache/openpi:/openpi_assets --entrypoint bash parilo/pi0_n2
 export SOURCE_CODE_PATH=/app
 export PYTHONPATH=$PYTHONPATH:$SOURCE_CODE_PATH/src
 cd $SOURCE_CODE_PATH
 source set_env.sh
 CUDA_VISIBLE_DEVICES=3 python scripts/train.py pi0_ur10_low_mem_finetune --exp-name=debug_pi0_ur10_low_mem_finetune --resume
+CUDA_VISIBLE_DEVICES=3 python scripts/train.py pi0_ur10_finetune --exp-name=debug_pi0_ur10_finetune --resume
+
+scripts/serve_policy.py policy:checkpoint --policy.config=pi0_fast_ur10_finetune --policy.dir=/openpi_assets/openpi-assets/checkpoints/pi0_fast_ur10_finetune/40000
