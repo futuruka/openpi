@@ -523,6 +523,29 @@ _CONFIGS = [
     TrainConfig(
         name="pi0_ur10_finetune",
         model=pi0.Pi0Config(),
+        data=UR10DataConfig(
+            repo_id="ur10",
+            assets=AssetsConfig(
+                asset_id="/app/data/dataset-10k/",
+            ),
+            base_config=DataConfig(
+                local_files_only=False,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+        ),
+        # data=FakeDataConfig(),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        fsdp_devices=2,
+        batch_size=32,
+        num_train_steps=10_000,
+        log_interval=50,
+        save_interval=1_000,
+        keep_period=1_000,
+    ),
+
+    TrainConfig(
+        name="pi0_ur10_finetune_n",
+        model=pi0.Pi0Config(),
         # data=UR10DataConfig(
         #     repo_id="ur10",
         #     assets=AssetsConfig(
