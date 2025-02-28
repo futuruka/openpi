@@ -159,7 +159,8 @@ class DataConfigFactory(abc.ABC):
         )
 
     def _load_norm_stats(self, assets_dir: epath.Path, asset_id: str | None) -> dict[str, _transforms.NormStats] | None:
-        if asset_id.startswith("/app/data/dataset"):
+        # if asset_id.startswith("/app/data/dataset"):
+        if "dataset" in asset_id:
             asset_id = "ur10"
         if asset_id is None:
             return None
@@ -546,19 +547,21 @@ _CONFIGS = [
     TrainConfig(
         name="pi0_ur10_finetune_n",
         model=pi0.Pi0Config(),
-        # data=UR10DataConfig(
-        #     repo_id="ur10",
-        #     assets=AssetsConfig(
-        #         asset_id="/app/data/dataset-10k/",
-        #     ),
-        #     base_config=DataConfig(
-        #         local_files_only=False,  # Set to True for local-only datasets.
-        #         prompt_from_task=True,
-        #     ),
-        # ),
-        data=FakeDataConfig(),
+        data=UR10DataConfig(
+            repo_id="ur10",
+            assets=AssetsConfig(
+                # asset_id="/app/data/dataset-10k/",
+                asset_id="./dataset-tmp/",
+            ),
+            base_config=DataConfig(
+                local_files_only=False,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+        ),
+        # data=FakeDataConfig(),
+        # !!! implement
         # weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
-        # fsdp_devices=2,
+        fsdp_devices=2,
         batch_size=32,
         num_train_steps=100_000,
         log_interval=50,
