@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 import random
 from numpy.typing import NDArray
-from typing import List, Dict, Iterator, Tuple
+from typing import List, Dict, Iterator, Optional, Tuple
 import torch
 
 
@@ -72,8 +72,12 @@ class HDF5UR10Dataset(torch.utils.data.IterableDataset):
             files: List[str],
             field_list: List[str],
             num_forward_records: List[int],
+            field_list_optional: Optional[List[str]] = None,
+            default_values: Optional[Dict[str, np.ndarray]] = None,
             ):
         self.field_list = field_list
+        self.field_list_optional_set = set(field_list_optional or [])
+        self.default_values = default_values or {}
         self.files = files
         self.num_forward_records = num_forward_records
 
@@ -99,6 +103,8 @@ class HDF5UR10Dataset(torch.utils.data.IterableDataset):
         """Read a specific transition from a given HDF5 file."""
         results = {}
 
+        prefix = ""
+
         for dataset_name, num_fwd_rec in zip(self.field_list, self.num_forward_records):
             if dataset_name in file:
                 dataset = file[dataset_name]
@@ -112,9 +118,15 @@ class HDF5UR10Dataset(torch.utils.data.IterableDataset):
                 else:
                     raise ValueError(f"Field: {dataset_name} Index {index} out of bounds (shape={dataset.shape})")
             else:
-                raise ValueError(f"Field ({dataset_name}) not found")
+                if dataset_name not in self.field_list_optional_set:
+                    raise ValueError(f"Field ({dataset_name}) not found in file ({file.filename})")
+                else:
+                    if dataset_name not in self.default_values:
+                        raise ValueError(f"Defaul value for field ({dataset_name}) not found, file ({file.filename})")
+                    results[dataset_name] = self.default_values[dataset_name]
+                    prefix = "no force torque sensor, "
 
-        results["prompt"] = "pick any object"
+        results["prompt"] = f"{prefix}pick any object"
         return results
 
     def __iter__(self) -> Iterator[Dict[str, NDArray]]:

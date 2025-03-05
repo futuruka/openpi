@@ -70,6 +70,7 @@ def save_state(
         data_config = data_loader.data_config()
         norm_stats = data_config.norm_stats
         if norm_stats is not None and data_config.asset_id is not None:
+            print(f'--- save norm stats {directory / data_config.asset_id}', flush=True)
             _normalize.save(directory / data_config.asset_id, norm_stats)
 
     print(f'--- save_state 1', flush=True)

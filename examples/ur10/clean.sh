@@ -1,0 +1,1 @@
+rm wrist_*.jpg

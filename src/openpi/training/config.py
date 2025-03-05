@@ -560,13 +560,13 @@ _CONFIGS = [
         ),
         # data=FakeDataConfig(),
         # !!! implement
-        # weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         fsdp_devices=2,
         batch_size=32,
-        num_train_steps=100_000,
+        num_train_steps=100,
         log_interval=50,
-        save_interval=10_000,
-        keep_period=10_000,
+        save_interval=50,
+        keep_period=50,
     ),
 
     TrainConfig(

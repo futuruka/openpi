@@ -1,22 +1,46 @@
 from openpi.training.ur10_data_loader import HDF5UR10Dataset, find_h5py_files
 import cv2
+import numpy as np
 
 
 def main():
 
     # Example Usage
-    directory = "/app/data/dataset-tmp/"
+    directory = "/app/data/dataset-valid/"
+    # field_list = [
+    #     "episode/observations/CompressedRGB__rgb",
+    #     "episode/observations/array__joint_angles",
+    #     "episode/observations/array__gripper",
+    #     "episode/actions/scalar__gripper|pos",
+    # ]
+
     field_list = [
         "episode/observations/CompressedRGB__rgb",
-        "episode/observations/array__joint_angles",
         "episode/observations/array__gripper",
+        "episode/observations/array__external_force",
+        "episode/observations/array__external_torque",
+
+        "episode/actions/array__move|rotvec",
+        "episode/actions/array__move|xyz",
         "episode/actions/scalar__gripper|pos",
     ]
+
+    field_list_optional = [
+        "episode/observations/array__external_force",
+        "episode/observations/array__external_torque",
+    ]
+
+    default_values = {
+        "episode/observations/array__external_force": np.zeros((1, 3)),
+        "episode/observations/array__external_torque": np.zeros((1, 3)),
+    }
 
     dataset = HDF5UR10Dataset(
         files=find_h5py_files(directory),
         field_list=field_list,
-        num_forward_records=[1, 51, 51, 50],
+        field_list_optional=field_list_optional,
+        default_values=default_values,
+        num_forward_records=[1, 1, 1, 1, 50, 50, 50],
     )
 
     # Example of how you might use DataLoader to load data in parallel
@@ -48,3 +72,32 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# FILE_CONTENTS {
+#  group      /
+#  group      /episode
+#  group      /episode/actions
+#  dataset    /episode/actions/array__move|rotvec
+#  dataset    /episode/actions/array__move|xyz
+#  dataset    /episode/actions/array__pose
+#  dataset    /episode/actions/scalar__episode_end
+#  dataset    /episode/actions/scalar__gripper|pos
+#  dataset    /episode/actions/scalar__robot
+#  dataset    /episode/dones
+#  group      /episode/infos
+#  group      /episode/observations
+#  dataset    /episode/observations/CompressedDepth__depth
+#  dataset    /episode/observations/CompressedDepth__depth_left
+#  dataset    /episode/observations/CompressedDepth__depth_right_up
+#  dataset    /episode/observations/CompressedRGB__rgb
+#  dataset    /episode/observations/CompressedRGB__rgb_left
+#  dataset    /episode/observations/CompressedRGB__rgb_right_up
+#  dataset    /episode/observations/array__external_force
+#  dataset    /episode/observations/array__external_torque
+#  dataset    /episode/observations/array__gripper
+#  dataset    /episode/observations/array__gripper_open
+#  dataset    /episode/observations/array__joint_angles
+#  dataset    /episode/observations/array__robot_pos_rotvec
+#  dataset    /episode/rewards
+#  }

@@ -2,6 +2,7 @@ import dataclasses
 import functools
 import logging
 import platform
+import time
 from typing import Any
 
 import etils.epath as epath
@@ -213,19 +214,15 @@ def main(config: _config.TrainConfig):
             f"Batch size {config.batch_size} must be divisible by the number of devices {jax.device_count()}."
         )
 
-    print(f'--- train 1')
     jax.config.update("jax_compilation_cache_dir", str(epath.Path("~/.cache/jax").expanduser()))
 
-    print(f'--- train 2')
     rng = jax.random.key(config.seed)
     train_rng, init_rng = jax.random.split(rng)
 
-    print(f'--- train 3')
     mesh = sharding.make_mesh(config.fsdp_devices)
     data_sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec(sharding.DATA_AXIS))
     replicated_sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec())
 
-    print(f'--- train 4')
     checkpoint_manager, resuming = _checkpoints.initialize_checkpoint_dir(
         config.checkpoint_dir,
         keep_period=config.keep_period,
@@ -233,7 +230,20 @@ def main(config: _config.TrainConfig):
         resume=config.resume,
     )
     # init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
-    print(f'--- train 5')
+
+    CONFIG_NAME = 'pi0_ur10_finetune_n'
+    EXP_NAME = 'debug_pi0_ur10_finetune_n_3'
+    EXP_PATH = f'exp/233_pi0/{EXP_NAME}'
+
+    from download_assets import DFSClient
+    dfs_client = DFSClient()
+    # /slot/sandbox/d/in/script/0_script_unpacked/openpi2/assets/pi0_ur10_finetune_n/ur10
+    dst_norm_stats_path = f'{EXP_PATH}/norm_stats.json';
+    dfs_client.upload_file(
+        local_path=f'assets/{CONFIG_NAME}/ur10/norm_stats.json',
+        dst_path=dst_norm_stats_path,
+    )
+    print(f'--- uploaded norm_stats to {dst_norm_stats_path}', flush=True)
 
     data_loader = _data_loader.create_data_loader(
         config,
@@ -241,24 +251,17 @@ def main(config: _config.TrainConfig):
         num_workers=config.num_workers,
         shuffle=True,
     )
-    print(f'--- train 6')
     data_iter = iter(data_loader)
     batch = next(data_iter)
-    print(f'--- train 7')
     logging.info(f"Initialized data loader:\n{training_utils.array_tree_to_info(batch)}")
 
-    print(f'--- train 7.1')
     train_state, train_state_sharding = init_train_state(config, init_rng, mesh, resume=resuming)
-    print(f'--- train 7.2')
     jax.block_until_ready(train_state)
-    print(f'--- train 7.3')
     logging.info(f"Initialized train state:\n{training_utils.array_tree_to_info(train_state.params)}")
-    print(f'--- train 8')
 
     if resuming:
         train_state = _checkpoints.restore_state(checkpoint_manager, train_state, data_loader)
 
-    print(f'--- train 9')
     ptrain_step = jax.jit(
         functools.partial(train_step, config),
         in_shardings=(replicated_sharding, train_state_sharding, data_sharding),
@@ -266,7 +269,6 @@ def main(config: _config.TrainConfig):
         donate_argnums=(1,),
     )
 
-    print(f'--- train 10')
     start_step = int(train_state.step)
     pbar = tqdm.tqdm(
         range(start_step, config.num_train_steps),
@@ -274,7 +276,6 @@ def main(config: _config.TrainConfig):
         total=config.num_train_steps,
         dynamic_ncols=True,
     )
-    print(f'--- train 11')
 
     infos = []
     for step in pbar:
@@ -302,6 +303,17 @@ def main(config: _config.TrainConfig):
 
         if (step % config.save_interval == 0 and step > start_step) or step == config.num_train_steps - 1:
             _checkpoints.save_state(checkpoint_manager, train_state, data_loader, step)
+            print(f'--- saved checkpoint, step {step}')
+            # dfs_client.upload_file(, 'exp/233_pi0/')
+            # /slot/sandbox/d/in/script/0_script_unpacked/openpi2/checkpoints/pi0_ur10_finetune_n/debug_pi0_ur10_finetune_n/50
+            dst_checkpoint_path = f'{EXP_PATH}/{EXP_NAME}/{step}/ckpt.tar'
+            t1 = time.time()
+            dfs_client.upload_dir_as_tar(
+                local_path=f'checkpoints/{CONFIG_NAME}/pi0_ur10_finetune_n/{step}',
+                dst_path=dst_checkpoint_path,
+                exclude_paths=['train_state'],
+            )
+            print(f'--- uploaded checkpoint to {dst_checkpoint_path} time {time.time() - t1}')
 
     logging.info("Waiting for checkpoint manager to finish")
     checkpoint_manager.wait_until_finished()

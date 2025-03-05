@@ -12,6 +12,9 @@ from openpi_client import image_tools
 IMG_SIZE = (224, 224)
 
 
+# h5dump -n /app/data/dataset-valid/02b/209755180c8dc3edfd9076fcae548cbedeea2.h5py
+
+
 def make_observation_ur10(
         cam_img: np.ndarray,
         joint_angles: np.ndarray,
@@ -35,20 +38,22 @@ def main():
     field_list = [
         "episode/observations/CompressedRGB__rgb",
         "episode/observations/array__joint_angles",
-        "episode/observations/array__gripper"
+        # "episode/observations/array__gripper"
+        "episode/actions/scalar__gripper|pos",
     ]
 
     ep = read_episode_data(
         # train
-        # file_path='/app/data/dataset_sft_iter_1_1688/a00/17996dd467769f3fab79c30e8cf2d07ab4aea.h5py',
+        file_path='/app/data/dataset/dataset_sft_iter_1_1688/000/9fedb8cf74024a6b3f779227961bf7c96da55.h5py',
         # valid
-        file_path='/app/data/dataset_sft_iter_2_1786/000/3468d30c7abc4e734a18f7c6133e15a10038a.h5py',
+        # file_path='/app/data/dataset-valid/02b/209755180c8dc3edfd9076fcae548cbedeea2.h5py',
         field_list=field_list,
     )
 
     ep_images = ep["episode/observations/CompressedRGB__rgb"]
     ep_joint_angles = ep["episode/observations/array__joint_angles"]
-    ep_gripper_pos = ep["episode/observations/array__gripper"]
+    # ep_gripper_pos = ep["episode/observations/array__gripper"]
+    ep_gripper_pos = ep["episode/actions/scalar__gripper|pos"]
 
     print(f'--- keys {list(ep.keys())}')
     print(f'--- images {ep_images.shape}')
@@ -66,12 +71,14 @@ def main():
     for ind in range(num_steps):
 
         joint_angles = ep_joint_angles[ind]
-        # print(f'--- joint_angles {joint_angles}')
+        obs_gripper_pos = ep_gripper_pos[ind]
+        # obs_gripper_pos = 99
+        print(f'--- joint_angles {joint_angles} gr {obs_gripper_pos}')
 
         obs = make_observation_ur10(
             cam_img=ep_images[ind],
             joint_angles=joint_angles,
-            gripper_pos=ep_gripper_pos[ind, 0],
+            gripper_pos=obs_gripper_pos,
         )
 
         # print(f'--- obs {joint_angles.shape} gr {ep_gripper_pos[ind].shape}')
@@ -80,7 +87,8 @@ def main():
 
         ret = policy.infer(obs)
         actions = ret["actions"]
-        print(f'{ind} gr diff {ep_gripper_pos[ind, 0] / 100 - actions[0, 6]}')
+        action_gripper = actions[0, 6]
+        print(f'{ind} gr {action_gripper} gr diff {obs_gripper_pos / 100 - action_gripper}')
         # print(f'{ind} gripper {actions[:, 6]}')
         # act = actions[0][:6]
         # dj = act - joint_angles
