@@ -77,6 +77,9 @@ class HDF5UR10Dataset(torch.utils.data.IterableDataset):
         self.files = files
         self.num_forward_records = num_forward_records
 
+        if len(field_list) != len(self.num_forward_records):
+            raise ValueError(f"len(field_list) ({len(field_list)}) should be equal to len(num_forward_records) ({len(num_forward_records)})")
+
         # This will be set per worker by get_worker_info()
         self.rank = None
         self.world_size = None
@@ -92,27 +95,26 @@ class HDF5UR10Dataset(torch.utils.data.IterableDataset):
             f"    Average Transitions per File: {avg_tr:.2f}"
         )
 
-    def _read_transition(self, file_path: str, index: int) -> Dict[str, NDArray]:
+    def _read_transition(self, file: h5py.File, index: int) -> Dict[str, NDArray]:
         """Read a specific transition from a given HDF5 file."""
         results = {}
 
-        with h5py.File(file_path, "r") as f:
-            for dataset_name, num_fwd_rec in zip(self.field_list, self.num_forward_records):
-                if dataset_name in f:
-                    dataset = f[dataset_name]
-                    if index < dataset.shape[0]:
-                        num_records = dataset.shape[0]
-                        indices = [min(index + i, num_records - 1) for i in range(num_fwd_rec)]
-                        data_list = [dataset[idx] for idx in indices]
-                        if "CompressedRGB" in dataset_name:
-                            data_list = [jpg2img(data) for data in data_list]
-                        results[dataset_name] = np.stack(data_list)
-                    else:
-                        results[dataset_name] = f"Index {index} out of bounds (shape={dataset.shape})"
+        for dataset_name, num_fwd_rec in zip(self.field_list, self.num_forward_records):
+            if dataset_name in file:
+                dataset = file[dataset_name]
+                if index < dataset.shape[0]:
+                    num_records = dataset.shape[0]
+                    indices = [min(index + i, num_records - 1) for i in range(num_fwd_rec)]
+                    data_list = [dataset[idx] for idx in indices]
+                    if "CompressedRGB" in dataset_name:
+                        data_list = [jpg2img(data) for data in data_list]
+                    results[dataset_name] = np.stack(data_list)
                 else:
-                    results[dataset_name] = "Dataset not found"
+                    raise ValueError(f"Field: {dataset_name} Index {index} out of bounds (shape={dataset.shape})")
+            else:
+                raise ValueError(f"Field ({dataset_name}) not found")
 
-        results["prompt"] = "pick any object in a bin"
+        results["prompt"] = "pick any object"
         return results
 
     def __iter__(self) -> Iterator[Dict[str, NDArray]]:
@@ -139,5 +141,6 @@ class HDF5UR10Dataset(torch.utils.data.IterableDataset):
             file = random.choice(shard_files)  # Randomly select a file from the worker's shard
             with h5py.File(file, "r") as f:
                 num_transitions = f[self.field_list[0]].shape[0]
-                index = random.randint(0, num_transitions - 1)  # Randomly select an index
-                yield self._read_transition(file, index)
+                # We don't sample last obs since it has no action
+                index = random.randint(0, num_transitions - 2)  # Randomly select an index
+                yield self._read_transition(f, index)

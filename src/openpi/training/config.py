@@ -321,6 +321,7 @@ class UR10DataConfig(DataConfigFactory):
                         "wrist_image": "episode/observations/CompressedRGB__rgb",
                         "joint_angles": "episode/observations/array__joint_angles",
                         "gripper_pos": "episode/observations/array__gripper",
+                        "gripper_action": "episode/actions/scalar__gripper|pos",
                         "prompt": "prompt",
                     }
                 )
@@ -534,7 +535,6 @@ _CONFIGS = [
                 prompt_from_task=True,
             ),
         ),
-        # data=FakeDataConfig(),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         fsdp_devices=2,
         batch_size=32,

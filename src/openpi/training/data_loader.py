@@ -140,9 +140,10 @@ def create_dataset(data_config: _config.DataConfig, model_config: _model.BaseMod
             field_list=[
                 "episode/observations/CompressedRGB__rgb",
                 "episode/observations/array__joint_angles",
-                "episode/observations/array__gripper"
+                "episode/observations/array__gripper",
+                "episode/actions/scalar__gripper|pos",
             ],
-            num_forward_records=[1, 51, 51],
+            num_forward_records=[1, 51, 51, 50],
         )
 
     dataset_meta = lerobot_dataset.LeRobotDatasetMetadata(repo_id, local_files_only=data_config.local_files_only)

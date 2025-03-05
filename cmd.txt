@@ -5,6 +5,7 @@ mkdir /home/parilo/.cache/openpi
 docker run --rm --runtime=nvidia --gpus all --network=host --name pi0 -it -v $PWD:/app -v /home/parilo/.cache/openpi:/openpi_assets --entrypoint bash parilo/pi0
 docker run --rm --runtime=nvidia --gpus all --network=host --shm-size=1g --ulimit memlock=-1 --name pi0 -it -v $PWD:/app -v /home/parilo/.cache/openpi:/openpi_assets --entrypoint bash parilo/pi0
 docker run --rm --runtime=nvidia --gpus all --network=host --shm-size=1g --ulimit memlock=-1 --name pi0 -it -v $PWD:/app -v /home/parilo/.cache/openpi:/openpi_assets -v /extra_disk_1/parilo/data/:/app/data --entrypoint bash parilo/pi0
+docker run --rm --gpus all --network=host --shm-size=100g --ulimit memlock=-1 --name pi0 -it -v $PWD:/app -v /home/parilo/.cache/openpi:/openpi_assets -v /home/parilo/ruka/lib/openpi/data/:/app/data --entrypoint bash parilo/pi0
 
 # in docker
 source /.venv/bin/activate
@@ -30,11 +31,12 @@ python -m pip install .
 uv pip install h5py && apt update && apt install ffmpeg libsm6 libxext6  -y
 uv run scripts/compute_norm_stats.py --config-name pi0_ur10_low_mem_finetune
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_ur10_finetune --exp-name=ur10_ft --overwrite
+
 CUDA_VISIBLE_DEVICES=0 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_ur10_low_mem_finetune --exp-name=ur10_lm_ft_run_7 --resume
 CUDA_VISIBLE_DEVICES=1 XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 uv run scripts/train.py pi0_fast_ur10_low_mem_finetune --exp-name=ur10_lm_ft_run_fast_1 --resume
-CUDA_VISIBLE_DEVICES=1,6 uv run scripts/train.py pi0_fast_ur10_finetune --exp-name=debug_pi0_fast_ur10_finetune --resume
-uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_ur10_low_mem_finetune --policy.dir=checkpoints/pi0_ur10_low_mem_finetune/ur10_lm_ft_run_4/9999/
+CUDA_VISIBLE_DEVICES=2,3 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_ur10_finetune --exp-name=pi0_ur10_finetune_11 --resume
 
+uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_ur10_low_mem_finetune --policy.dir=checkpoints/pi0_ur10_low_mem_finetune/ur10_lm_ft_run_4/9999/
 
 # build docker in cobots VM
 docker build -t parilo/pi2 -f scripts/docker/serve_policy2.Dockerfile .

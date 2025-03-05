@@ -81,7 +81,7 @@ class UR10Inputs(transforms.DataTransformFn):
         if is_batch:
             actions = np.concatenate([
                 data["joint_angles"][1:],
-                data["gripper_pos"][1:] / 100
+                np.expand_dims(data["gripper_action"] / 100, -1),
             ], axis=-1)
             # print(f'--- actions {actions.shape}\n{actions[:2]}')
             actions = transforms.pad_to_dim(actions, self.action_dim)
