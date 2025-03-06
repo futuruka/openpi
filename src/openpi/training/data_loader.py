@@ -135,16 +135,55 @@ def create_dataset(data_config: _config.DataConfig, model_config: _model.BaseMod
         return FakeDataset(model_config, num_samples=1024)
     if repo_id == "ur10":
 
-        return HDF5UR10Dataset(
+        # joints control
+        # return HDF5UR10Dataset(
+        #     files=find_h5py_files(data_config.asset_id),
+        #     field_list=[
+        #         "episode/observations/CompressedRGB__rgb",
+        #         "episode/observations/array__joint_angles",
+        #         "episode/observations/array__gripper",
+        #         "episode/actions/scalar__gripper|pos",
+        #     ],
+        #     num_forward_records=[1, 51, 51, 50],
+        # )
+
+        # end-effector control
+        field_list = [
+            "episode/observations/CompressedRGB__rgb",
+            "episode/observations/array__gripper",
+            "episode/observations/array__external_force",
+            "episode/observations/array__external_torque",
+
+            "episode/actions/array__move|rotvec",
+            "episode/actions/array__move|xyz",
+            "episode/actions/scalar__gripper|pos",
+            "episode/actions/scalar__gripper|force",
+            "episode/actions/scalar__gripper|speed",
+        ]
+
+        field_list_optional = [
+            "episode/observations/array__external_force",
+            "episode/observations/array__external_torque",
+            "episode/actions/scalar__gripper|force",
+            "episode/actions/scalar__gripper|speed",
+        ]
+
+        default_values = {
+            "episode/observations/array__external_force": np.zeros((1, 3)),
+            "episode/observations/array__external_torque": np.zeros((1, 3)),
+            "episode/actions/scalar__gripper|force": np.array([5.] * 50),
+            "episode/actions/scalar__gripper|speed": np.array([20.] * 50),
+        }
+
+        dataset = HDF5UR10Dataset(
             files=find_h5py_files(data_config.asset_id),
-            field_list=[
-                "episode/observations/CompressedRGB__rgb",
-                "episode/observations/array__joint_angles",
-                "episode/observations/array__gripper",
-                "episode/actions/scalar__gripper|pos",
-            ],
-            num_forward_records=[1, 51, 51, 50],
+            field_list=field_list,
+            field_list_optional=field_list_optional,
+            default_values=default_values,
+            num_forward_records=[1, 1, 1, 1, 50, 50, 50, 50, 50],
         )
+
+        return dataset
 
     dataset_meta = lerobot_dataset.LeRobotDatasetMetadata(repo_id, local_files_only=data_config.local_files_only)
     dataset = lerobot_dataset.LeRobotDataset(

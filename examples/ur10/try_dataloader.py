@@ -23,16 +23,22 @@ def main():
         "episode/actions/array__move|rotvec",
         "episode/actions/array__move|xyz",
         "episode/actions/scalar__gripper|pos",
+        "episode/actions/scalar__gripper|force",
+        "episode/actions/scalar__gripper|speed",
     ]
 
     field_list_optional = [
         "episode/observations/array__external_force",
         "episode/observations/array__external_torque",
+        "episode/actions/scalar__gripper|force",
+        "episode/actions/scalar__gripper|speed",
     ]
 
     default_values = {
         "episode/observations/array__external_force": np.zeros((1, 3)),
         "episode/observations/array__external_torque": np.zeros((1, 3)),
+        "episode/actions/scalar__gripper|force": np.array([5.] * 50),
+        "episode/actions/scalar__gripper|speed": np.array([20.] * 50),
     }
 
     dataset = HDF5UR10Dataset(
@@ -40,7 +46,7 @@ def main():
         field_list=field_list,
         field_list_optional=field_list_optional,
         default_values=default_values,
-        num_forward_records=[1, 1, 1, 1, 50, 50, 50],
+        num_forward_records=[1, 1, 1, 1, 50, 50, 50, 50, 50],
     )
 
     # Example of how you might use DataLoader to load data in parallel
@@ -49,7 +55,7 @@ def main():
     dataloader = DataLoader(
         dataset,
         batch_size=4,
-        num_workers=2
+        num_workers=2,
     )
 
     for ind, transition in enumerate(dataloader):
@@ -74,6 +80,7 @@ if __name__ == "__main__":
     main()
 
 
+# HDF5 "/extra_disk_1/parilo/data/dataset/dataset_sft_iter_2_1786/000/3468d30c7abc4e734a18f7c6133e15a10038a.h5py" {
 # FILE_CONTENTS {
 #  group      /
 #  group      /episode
@@ -82,17 +89,19 @@ if __name__ == "__main__":
 #  dataset    /episode/actions/array__move|xyz
 #  dataset    /episode/actions/array__pose
 #  dataset    /episode/actions/scalar__episode_end
+#  dataset    /episode/actions/scalar__gripper|force
 #  dataset    /episode/actions/scalar__gripper|pos
+#  dataset    /episode/actions/scalar__gripper|speed
 #  dataset    /episode/actions/scalar__robot
 #  dataset    /episode/dones
 #  group      /episode/infos
 #  group      /episode/observations
 #  dataset    /episode/observations/CompressedDepth__depth
-#  dataset    /episode/observations/CompressedDepth__depth_left
-#  dataset    /episode/observations/CompressedDepth__depth_right_up
+#  dataset    /episode/observations/CompressedDepth__depth_head
+#  dataset    /episode/observations/CompressedDepth__depth_side
 #  dataset    /episode/observations/CompressedRGB__rgb
-#  dataset    /episode/observations/CompressedRGB__rgb_left
-#  dataset    /episode/observations/CompressedRGB__rgb_right_up
+#  dataset    /episode/observations/CompressedRGB__rgb_head
+#  dataset    /episode/observations/CompressedRGB__rgb_side
 #  dataset    /episode/observations/array__external_force
 #  dataset    /episode/observations/array__external_torque
 #  dataset    /episode/observations/array__gripper
@@ -101,3 +110,4 @@ if __name__ == "__main__":
 #  dataset    /episode/observations/array__robot_pos_rotvec
 #  dataset    /episode/rewards
 #  }
+# }

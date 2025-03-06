@@ -314,15 +314,39 @@ class UR10DataConfig(DataConfigFactory):
         # )
 
         # Make inputs look like they come from the Libero environment
+        # joints control
+        # repack_transform = _transforms.Group(
+        #     inputs=[
+        #         _transforms.RepackTransform(
+        #             {
+        #                 "wrist_image": "episode/observations/CompressedRGB__rgb",
+        #                 "joint_angles": "episode/observations/array__joint_angles",
+        #                 "gripper_pos": "episode/observations/array__gripper",
+        #                 "gripper_action": "episode/actions/scalar__gripper|pos",
+        #                 "prompt": "prompt",
+        #             }
+        #         )
+        #     ]
+        # )
+
+
         repack_transform = _transforms.Group(
             inputs=[
                 _transforms.RepackTransform(
                     {
                         "wrist_image": "episode/observations/CompressedRGB__rgb",
-                        "joint_angles": "episode/observations/array__joint_angles",
                         "gripper_pos": "episode/observations/array__gripper",
-                        "gripper_action": "episode/actions/scalar__gripper|pos",
+                        "external_force": "episode/observations/array__external_force",
+                        "external_torque": "episode/observations/array__external_torque",
+
+                        "move_rotvec": "episode/actions/array__move|rotvec",
+                        "move_xyz": "episode/actions/array__move|xyz",
+                        "action_gripper_pos": "episode/actions/scalar__gripper|pos",
+                        "action_gripper_force": "episode/actions/scalar__gripper|force",
+                        "action_gripper_speed": "episode/actions/scalar__gripper|speed",
+
                         "prompt": "prompt",
+                        "features": "features",
                     }
                 )
             ]
@@ -550,8 +574,7 @@ _CONFIGS = [
         data=UR10DataConfig(
             repo_id="ur10",
             assets=AssetsConfig(
-                # asset_id="/app/data/dataset-10k/",
-                asset_id="./dataset-tmp/",
+                asset_id="./dataset-10k/",
             ),
             base_config=DataConfig(
                 local_files_only=False,  # Set to True for local-only datasets.
@@ -563,10 +586,10 @@ _CONFIGS = [
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         fsdp_devices=2,
         batch_size=32,
-        num_train_steps=100,
+        num_train_steps=10_000,
         log_interval=50,
-        save_interval=50,
-        keep_period=50,
+        save_interval=1000,
+        keep_period=1000,
     ),
 
     TrainConfig(
@@ -599,8 +622,8 @@ _CONFIGS = [
         data=UR10DataConfig(
             repo_id="ur10",
             assets=AssetsConfig(
-                # asset_id="/app/data/dataset_sft_iter_1_1688/",
-                asset_id="/app/data/dataset-10k/",
+                asset_id="/app/data/dataset/dataset_sft_iter_1_1688/",
+                # asset_id="/app/data/dataset-10k/",
             ),
             base_config=DataConfig(
                 local_files_only=False,  # Set to True for local-only datasets.
@@ -611,7 +634,7 @@ _CONFIGS = [
         # fsdp_devices=1,
         batch_size=32,
         num_train_steps=100_000,
-        log_interval=50,
+        log_interval=10,
         save_interval=10_000,
         keep_period=10_000,
         freeze_filter=pi0.Pi0Config(

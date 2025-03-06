@@ -103,7 +103,7 @@ class HDF5UR10Dataset(torch.utils.data.IterableDataset):
         """Read a specific transition from a given HDF5 file."""
         results = {}
 
-        prefix = ""
+        features = ""
 
         for dataset_name, num_fwd_rec in zip(self.field_list, self.num_forward_records):
             if dataset_name in file:
@@ -124,9 +124,17 @@ class HDF5UR10Dataset(torch.utils.data.IterableDataset):
                     if dataset_name not in self.default_values:
                         raise ValueError(f"Defaul value for field ({dataset_name}) not found, file ({file.filename})")
                     results[dataset_name] = self.default_values[dataset_name]
-                    prefix = "no force torque sensor, "
 
-        results["prompt"] = f"{prefix}pick any object"
+        features = ""
+        if "episode/observations/array__external_force" not in file:
+            features += "no force torque sensor data, "
+        if "episode/actions/scalar__gripper|force" not in file:
+            features += "no gripper force action data, "
+        if "episode/actions/scalar__gripper|speed" not in file:
+            features += "no gripper speed action data, "
+
+        results["prompt"] = f"pick any object"
+        results["features"] = features
         return results
 
     def __iter__(self) -> Iterator[Dict[str, NDArray]]:
