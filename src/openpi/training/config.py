@@ -586,10 +586,10 @@ _CONFIGS = [
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         fsdp_devices=2,
         batch_size=32,
-        num_train_steps=10_000,
+        num_train_steps=40_000,
         log_interval=50,
-        save_interval=1000,
-        keep_period=1000,
+        save_interval=2000,
+        keep_period=2000,
     ),
 
     TrainConfig(

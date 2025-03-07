@@ -232,7 +232,7 @@ def main(config: _config.TrainConfig):
     # init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
 
     CONFIG_NAME = 'pi0_ur10_finetune_n'
-    EXP_NAME = 'debug_pi0_ur10_finetune_n_4'
+    EXP_NAME = 'pi0_ur10_finetune_n_dx_1'
     EXP_PATH = f'exp/233_pi0/{EXP_NAME}'
 
     from download_assets import DFSClient
