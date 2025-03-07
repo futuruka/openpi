@@ -50,6 +50,8 @@ class UR10Inputs(transforms.DataTransformFn):
     model_type: _model.ModelType = _model.ModelType.PI0
 
     def __call__(self, data: dict) -> dict:
+        np.set_printoptions(suppress=True, precision=4)
+
         # print(f'--- joint_angles {data["joint_angles"].shape} wrist_image {data["wrist_image"].shape} gr {data["gripper_pos"].shape}')
         is_batch = len(data["gripper_pos"].shape) == 2
         # print(f'--- gripper_pos {data["gripper_pos"].shape} external_force {data["external_force"].shape} external_torque {data["external_torque"].shape}', flush=True)
@@ -58,17 +60,17 @@ class UR10Inputs(transforms.DataTransformFn):
             state = np.concatenate([
                 data["gripper_pos"],
                 data["external_force"],
-                data["external_torque"],
+                np.zeros_like(data["external_torque"]),
             ], axis=-1)
             state = np.squeeze(state, axis=0)
         else:
             state = np.concatenate([
                 data["gripper_pos"],
                 data["external_force"],
-                data["external_torque"],
+                np.zeros_like(data["external_torque"]),
             ], axis=-1)
 
-        # print(f'--- state {state.shape} {state}', flush=True)
+        print(f'--- state {state.shape} {state}', flush=True)
         # print(f'--- state {state.shape}', flush=True)
         state = transforms.pad_to_dim(state, self.action_dim)
 
@@ -79,7 +81,7 @@ class UR10Inputs(transforms.DataTransformFn):
             wrist_image = _parse_image(np.squeeze(data["wrist_image"], axis=0))
         else:
             wrist_image = _parse_image(data["wrist_image"])
-        # print(f'--- img {wrist_image.shape} {wrist_image.dtype} min {wrist_image.min()} mean {wrist_image.mean()} max {wrist_image.max()}', flush=True)
+        print(f'--- img {wrist_image.shape} {wrist_image.dtype} min {wrist_image.min()} mean {wrist_image.mean()} max {wrist_image.max()}', flush=True)
         # print(f'--- state {state[:7]}')
 
         match self.model_type:
@@ -103,14 +105,14 @@ class UR10Inputs(transforms.DataTransformFn):
 
         if "move_rotvec" in data:
             actions = np.concatenate([
-                data["move_rotvec"],
-                data["move_xyz"],
+                data["move_rotvec"] / 100,
+                data["move_xyz"] / 100,
                 np.expand_dims(data["action_gripper_pos"] / 100, -1),
                 np.expand_dims(data["action_gripper_force"] / 100, -1),
                 np.expand_dims(data["action_gripper_speed"] / 100, -1),
             ], axis=-1)
             # print(f'--- actions {actions.shape}\n{actions[:2]}')
-            # print(f'--- actions {actions.shape}', flush=True)
+            print(f'--- actions {actions.shape}', flush=True)
             actions = transforms.pad_to_dim(actions, self.action_dim)
             inputs["actions"] = actions
 
@@ -125,5 +127,4 @@ class UR10Inputs(transforms.DataTransformFn):
 @dataclasses.dataclass(frozen=True)
 class UR10Outputs(transforms.DataTransformFn):
     def __call__(self, data: dict) -> dict:
-        # Only return the first 8 dims.
-        return {"actions": np.asarray(data["actions"][:, :7])}
+        return {"actions": np.asarray(data["actions"][:, :9])}

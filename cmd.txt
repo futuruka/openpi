@@ -51,7 +51,6 @@ docker run --rm --runtime=nvidia --gpus all --network=host --name parilo/uv -it 
 
 CUDA_VISIBLE_DEVICES=0 uv run scripts/train.py debug --exp-name=debug_1 --resume
 
-source /.venv/bin/activate && source set_env.sh && uv pip install h5py && apt update && apt install ffmpeg libsm6 libxext6 -y
 CUDA_VISIBLE_DEVICES=1,6 uv run scripts/compute_norm_stats.py --config-name pi0_fast_ur10_finetune
 CUDA_VISIBLE_DEVICES=1,6 uv run scripts/train.py pi0_fast_ur10_finetune --exp-name=pi0_fast_ur10_finetune_3 --resume
 
@@ -89,3 +88,11 @@ python scripts/serve_policy.py policy:checkpoint --policy.config=pi0_ur10_finetu
 
 apt install hdf5-tools
 h5dump -n /app/data/dataset-valid/02b/209755180c8dc3edfd9076fcae548cbedeea2.h5py
+
+
+# on robot
+python -m pip install lib/openpi/packages/openpi-client
+
+docker run --rm --gpus all --network=host --shm-size=100g --ulimit memlock=-1 --name pi0 -it -v $PWD:/app -v /home/parilo/.cache/openpi:/openpi_assets -v /home/parilo/ruka/lib/openpi/data/:/app/data --entrypoint bash parilo/pi0
+source /.venv/bin/activate && source set_env.sh && uv pip install h5py && apt update && apt install ffmpeg libsm6 libxext6 -y
+uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_ur10_finetune --policy.dir=checkpoints/pi0_ur10_finetune_11/1000
