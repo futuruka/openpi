@@ -152,7 +152,7 @@ def create_dataset(data_config: _config.DataConfig, model_config: _model.BaseMod
             "episode/observations/CompressedRGB__rgb",
             "episode/observations/array__gripper",
             "episode/observations/array__external_force",
-            "episode/observations/array__external_torque",
+            # "episode/observations/array__external_torque",
 
             "episode/actions/array__move|rotvec",
             "episode/actions/array__move|xyz",
@@ -163,14 +163,14 @@ def create_dataset(data_config: _config.DataConfig, model_config: _model.BaseMod
 
         field_list_optional = [
             "episode/observations/array__external_force",
-            "episode/observations/array__external_torque",
+            # "episode/observations/array__external_torque",
             "episode/actions/scalar__gripper|force",
             "episode/actions/scalar__gripper|speed",
         ]
 
         default_values = {
             "episode/observations/array__external_force": np.zeros((1, 3)),
-            "episode/observations/array__external_torque": np.zeros((1, 3)),
+            # "episode/observations/array__external_torque": np.zeros((1, 3)),
             "episode/actions/scalar__gripper|force": np.array([5.] * 50),
             "episode/actions/scalar__gripper|speed": np.array([20.] * 50),
         }
@@ -180,7 +180,7 @@ def create_dataset(data_config: _config.DataConfig, model_config: _model.BaseMod
             field_list=field_list,
             field_list_optional=field_list_optional,
             default_values=default_values,
-            num_forward_records=[1, 1, 1, 1, 50, 50, 50, 50, 50],
+            num_forward_records=[1, 1, 1, 50, 50, 50, 50, 50],
         )
 
         return dataset

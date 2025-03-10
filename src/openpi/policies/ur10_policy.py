@@ -60,17 +60,17 @@ class UR10Inputs(transforms.DataTransformFn):
             state = np.concatenate([
                 data["gripper_pos"],
                 data["external_force"],
-                np.zeros_like(data["external_torque"]),
+                # np.zeros_like(data["external_torque"]),
             ], axis=-1)
             state = np.squeeze(state, axis=0)
         else:
             state = np.concatenate([
                 data["gripper_pos"],
                 data["external_force"],
-                np.zeros_like(data["external_torque"]),
+                # np.zeros_like(data["external_torque"]),
             ], axis=-1)
 
-        print(f'--- state {state.shape} {state}', flush=True)
+        # print(f'--- state {state.shape} {state}', flush=True)
         # print(f'--- state {state.shape}', flush=True)
         state = transforms.pad_to_dim(state, self.action_dim)
 
@@ -81,7 +81,7 @@ class UR10Inputs(transforms.DataTransformFn):
             wrist_image = _parse_image(np.squeeze(data["wrist_image"], axis=0))
         else:
             wrist_image = _parse_image(data["wrist_image"])
-        print(f'--- img {wrist_image.shape} {wrist_image.dtype} min {wrist_image.min()} mean {wrist_image.mean()} max {wrist_image.max()}', flush=True)
+        # print(f'--- img {wrist_image.shape} {wrist_image.dtype} min {wrist_image.min()} mean {wrist_image.mean()} max {wrist_image.max()}', flush=True)
         # print(f'--- state {state[:7]}')
 
         match self.model_type:
@@ -112,7 +112,7 @@ class UR10Inputs(transforms.DataTransformFn):
                 np.expand_dims(data["action_gripper_speed"] / 100, -1),
             ], axis=-1)
             # print(f'--- actions {actions.shape}\n{actions[:2]}')
-            print(f'--- actions {actions.shape}', flush=True)
+            # print(f'--- actions {actions.shape}', flush=True)
             actions = transforms.pad_to_dim(actions, self.action_dim)
             inputs["actions"] = actions
 

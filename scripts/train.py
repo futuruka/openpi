@@ -1,6 +1,7 @@
 import dataclasses
 import functools
 import logging
+import os
 import platform
 import time
 from typing import Any
@@ -231,8 +232,11 @@ def main(config: _config.TrainConfig):
     )
     # init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
 
+    if "EXP_NAME" not in os.environ:
+        raise ValueError("EXP_NAME must be set")
+
     CONFIG_NAME = 'pi0_ur10_finetune_n'
-    EXP_NAME = 'pi0_ur10_finetune_n_dx_1'
+    EXP_NAME = os.environ["EXP_NAME"]
     EXP_PATH = f'exp/233_pi0/{EXP_NAME}'
 
     from download_assets import DFSClient

@@ -1,7 +1,7 @@
 from openpi.training.ur10_data_loader import HDF5UR10Dataset, find_h5py_files
 import cv2
 import numpy as np
-
+import torch as t
 
 def main():
 
@@ -58,6 +58,9 @@ def main():
         num_workers=2,
     )
 
+    np.set_printoptions(suppress=True, precision=4)
+    t.set_printoptions(sci_mode=False, precision=4)
+
     for ind, transition in enumerate(dataloader):
         for name, value in transition.items():
             if hasattr(value, 'shape'):
@@ -71,6 +74,10 @@ def main():
             #     print(f'--- img min {value[:, 0].min()} mean {value[:, 0].mean()} max {value[:, 0].max()}')
             # elif name == "episode/observations/array__gripper":
             #     print(f'--- {name}\n{value.squeeze()}')
+            if name == "episode/actions/array__move|xyz":
+                print(f'--- {name}\n{value[0, 0]}')
+            elif name == "episode/actions/array__move|rotvec":
+                print(f'--- {name}\n{value[0, 0]}')
 
         if ind == 5:
             break

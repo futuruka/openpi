@@ -5,6 +5,7 @@ from collections.abc import Sequence
 import dataclasses
 import difflib
 import logging
+import os
 import pathlib
 from typing import Any, Protocol, TypeAlias
 
@@ -337,7 +338,7 @@ class UR10DataConfig(DataConfigFactory):
                         "wrist_image": "episode/observations/CompressedRGB__rgb",
                         "gripper_pos": "episode/observations/array__gripper",
                         "external_force": "episode/observations/array__external_force",
-                        "external_torque": "episode/observations/array__external_torque",
+                        # "external_torque": "episode/observations/array__external_torque",
 
                         "move_rotvec": "episode/actions/array__move|rotvec",
                         "move_xyz": "episode/actions/array__move|xyz",
@@ -463,6 +464,8 @@ class TrainConfig:
         if self.resume and self.overwrite:
             raise ValueError("Cannot resume and overwrite at the same time.")
 
+if "DATASET_PATH" not in os.environ:
+    raise ValueError("DATASET_PATH must be set")
 
 # Use `get_config` if you need to get a config by name in your code.
 _CONFIGS = [
@@ -574,22 +577,20 @@ _CONFIGS = [
         data=UR10DataConfig(
             repo_id="ur10",
             assets=AssetsConfig(
-                asset_id="./dataset-10k/",
+                asset_id=os.environ.get("DATASET_PATH"),  # "./dataset-10k/"
             ),
             base_config=DataConfig(
                 local_files_only=False,  # Set to True for local-only datasets.
                 prompt_from_task=True,
             ),
         ),
-        # data=FakeDataConfig(),
-        # !!! implement
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         fsdp_devices=2,
         batch_size=32,
-        num_train_steps=40_000,
+        num_train_steps=100_000,
         log_interval=50,
-        save_interval=2000,
-        keep_period=2000,
+        save_interval=10_000,
+        keep_period=10_000,
     ),
 
     TrainConfig(
