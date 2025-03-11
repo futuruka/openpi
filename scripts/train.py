@@ -1,5 +1,6 @@
 import dataclasses
 import functools
+import json
 import logging
 import os
 import platform
@@ -27,6 +28,7 @@ import openpi.training.optimizer as _optimizer
 import openpi.training.sharding as sharding
 import openpi.training.utils as training_utils
 import openpi.training.weight_loaders as _weight_loaders
+from download_assets import DFSClient
 
 
 def init_logging():
@@ -73,7 +75,7 @@ def init_wandb(config: _config.TrainConfig, *, resuming: bool, log_code: bool = 
 
 def _load_weights_and_validate(loader: _weight_loaders.WeightLoader, params_shape: at.Params) -> at.Params:
     """Loads and validates the weights. Returns a loaded subset of the weights."""
-    print(f'--- _load_weights_and_validate 1', flush=True)
+    print(f'--- _load_weights_and_validate 1 path {loader.params_path}', flush=True)
     loaded_params = loader.load(params_shape)
     print(f'--- _load_weights_and_validate 2', flush=True)
     at.check_pytree_equality(expected=params_shape, got=loaded_params, check_shapes=True, check_dtypes=True)
@@ -89,7 +91,7 @@ def _load_weights_and_validate(loader: _weight_loaders.WeightLoader, params_shap
 
 @at.typecheck
 def init_train_state(
-    config: _config.TrainConfig, init_rng: at.KeyArrayLike, mesh: jax.sharding.Mesh, *, resume: bool
+    config: _config.TrainConfig, init_rng: at.KeyArrayLike, mesh: jax.sharding.Mesh, *, resume: bool, weight_loader: _weight_loaders.WeightLoader = None,
 ) -> tuple[training_utils.TrainState, Any]:
     print(f'--- init_train_state 1')
     tx = _optimizer.create_optimizer(config.optimizer, config.lr_schedule, weight_decay_mask=None)
@@ -131,7 +133,10 @@ def init_train_state(
         return train_state_shape, state_sharding
 
     print(f'--- init_train_state 6')
-    partial_params = _load_weights_and_validate(config.weight_loader, train_state_shape.params.to_pure_dict())
+    partial_params = _load_weights_and_validate(
+        weight_loader or config.weight_loader,
+        train_state_shape.params.to_pure_dict()
+    )
     print(f'--- init_train_state 7')
     replicated_sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec())
     print(f'--- init_train_state 8')
@@ -207,6 +212,28 @@ def train_step(
 
 
 def main(config: _config.TrainConfig):
+    """Main training function."""
+
+    # Use experiment path from environment variable if available
+    EXP_PATH = os.environ.get('EXP_PATH', 'exp/default')
+    CONFIG_NAME = os.environ.get('CONFIG_NAME', config.name)
+
+    # Initialize DFSClient and check for existing checkpoints
+    dfs_client = DFSClient()
+
+    # Read resume step and checkpoint path from start_from.json if it exists
+    resume_from_step = None
+    checkpoint_path = None
+    is_resume = False
+    if os.path.exists("start_from.json"):
+        is_resume = True
+        with open("start_from.json", "r") as f:
+            start_from = json.loads(f.read())
+            resume_from_step = start_from.get("step")
+            checkpoint_path = start_from.get("checkpoint_path")
+
+    print(f'--- resume_from_step {resume_from_step} checkpoint_path {checkpoint_path}')
+
     init_logging()
     logging.info(f"Running on: {platform.node()}")
 
@@ -232,22 +259,18 @@ def main(config: _config.TrainConfig):
     )
     # init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
 
-    if "EXP_NAME" not in os.environ:
-        raise ValueError("EXP_NAME must be set")
+    if "EXP_PATH" not in os.environ:
+        raise ValueError("EXP_PATH must be set")
 
-    CONFIG_NAME = 'pi0_ur10_finetune_n'
-    EXP_NAME = os.environ["EXP_NAME"]
-    EXP_PATH = f'exp/233_pi0/{EXP_NAME}'
 
-    from download_assets import DFSClient
-    dfs_client = DFSClient()
-    # /slot/sandbox/d/in/script/0_script_unpacked/openpi2/assets/pi0_ur10_finetune_n/ur10
-    dst_norm_stats_path = f'{EXP_PATH}/norm_stats.json';
-    dfs_client.upload_file(
-        local_path=f'assets/{CONFIG_NAME}/ur10/norm_stats.json',
-        dst_path=dst_norm_stats_path,
-    )
-    print(f'--- uploaded norm_stats to {dst_norm_stats_path}', flush=True)
+    if not is_resume:
+        # /slot/sandbox/d/in/script/0_script_unpacked/openpi2/assets/pi0_ur10_finetune_n/ur10
+        dst_norm_stats_path = f'{EXP_PATH}/norm_stats.json';
+        dfs_client.upload_file(
+            local_path=f'assets/{CONFIG_NAME}/ur10/norm_stats.json',
+            dst_path=dst_norm_stats_path,
+        )
+        print(f'--- uploaded norm_stats to {dst_norm_stats_path}', flush=True)
 
     data_loader = _data_loader.create_data_loader(
         config,
@@ -259,7 +282,11 @@ def main(config: _config.TrainConfig):
     batch = next(data_iter)
     logging.info(f"Initialized data loader:\n{training_utils.array_tree_to_info(batch)}")
 
-    train_state, train_state_sharding = init_train_state(config, init_rng, mesh, resume=resuming)
+    weight_loader = None
+    if is_resume:
+        weight_loader = _weight_loaders.CheckpointWeightLoader(os.path.join(checkpoint_path, 'params'))
+
+    train_state, train_state_sharding = init_train_state(config, init_rng, mesh, resume=resuming, weight_loader=weight_loader)
     jax.block_until_ready(train_state)
     logging.info(f"Initialized train state:\n{training_utils.array_tree_to_info(train_state.params)}")
 
@@ -273,7 +300,7 @@ def main(config: _config.TrainConfig):
         donate_argnums=(1,),
     )
 
-    start_step = int(train_state.step)
+    start_step = int(train_state.step) if not is_resume else resume_from_step
     pbar = tqdm.tqdm(
         range(start_step, config.num_train_steps),
         initial=start_step,
@@ -308,12 +335,14 @@ def main(config: _config.TrainConfig):
         if (step % config.save_interval == 0 and step > start_step) or step == config.num_train_steps - 1:
             _checkpoints.save_state(checkpoint_manager, train_state, data_loader, step)
             print(f'--- saved checkpoint, step {step}')
-            # dfs_client.upload_file(, 'exp/233_pi0/')
             # /slot/sandbox/d/in/script/0_script_unpacked/openpi2/checkpoints/pi0_ur10_finetune_n/debug_pi0_ur10_finetune_n/50
-            dst_checkpoint_path = f'{EXP_PATH}/{EXP_NAME}/{step}/ckpt.tar'
+            dst_checkpoint_path = f'{EXP_PATH}/{step}/ckpt.tar'
+
+            # Make sure the directory exists locally
+            local_checkpoint_path = f'checkpoints/{CONFIG_NAME}/{CONFIG_NAME}/{step}'
             t1 = time.time()
             dfs_client.upload_dir_as_tar(
-                local_path=f'checkpoints/{CONFIG_NAME}/pi0_ur10_finetune_n/{step}',
+                local_path=local_checkpoint_path,
                 dst_path=dst_checkpoint_path,
                 exclude_paths=['train_state'],
             )
