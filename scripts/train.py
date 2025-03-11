@@ -214,9 +214,16 @@ def train_step(
 def main(config: _config.TrainConfig):
     """Main training function."""
 
-    # Use experiment path from environment variable if available
-    EXP_PATH = os.environ.get('EXP_PATH', 'exp/default')
-    CONFIG_NAME = os.environ.get('CONFIG_NAME', config.name)
+    if "EXP_PATH" not in os.environ:
+        raise ValueError("EXP_PATH must be set")
+    if "EXP_NAME" not in os.environ:
+        raise ValueError("EXP_NAME must be set")
+    if "CONFIG_NAME" not in os.environ:
+        raise ValueError("CONFIG_NAME must be set")
+
+    EXP_PATH = os.environ['EXP_PATH']
+    CONFIG_NAME = os.environ['CONFIG_NAME']
+    EXP_NAME = os.environ['EXP_NAME']
 
     # Initialize DFSClient and check for existing checkpoints
     dfs_client = DFSClient()
@@ -258,10 +265,6 @@ def main(config: _config.TrainConfig):
         resume=config.resume,
     )
     # init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
-
-    if "EXP_PATH" not in os.environ:
-        raise ValueError("EXP_PATH must be set")
-
 
     if not is_resume:
         # /slot/sandbox/d/in/script/0_script_unpacked/openpi2/assets/pi0_ur10_finetune_n/ur10
@@ -339,7 +342,7 @@ def main(config: _config.TrainConfig):
             dst_checkpoint_path = f'{EXP_PATH}/{step}/ckpt.tar'
 
             # Make sure the directory exists locally
-            local_checkpoint_path = f'checkpoints/{CONFIG_NAME}/{CONFIG_NAME}/{step}'
+            local_checkpoint_path = f'checkpoints/{CONFIG_NAME}/{EXP_NAME}/{step}'
             t1 = time.time()
             dfs_client.upload_dir_as_tar(
                 local_path=local_checkpoint_path,
